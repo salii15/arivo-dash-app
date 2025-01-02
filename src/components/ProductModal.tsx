@@ -264,7 +264,7 @@ export default function ProductModal({ isOpen, onClose, mode, onOpenCategories }
                                   ? 'Dosyayı buraya bırakın...'
                                   : 'Resim yüklemek için tıklayın veya dosyayı sürükleyin'}
                               </p>
-                              <Button variant="outlined" color="primary" className="mt-2">
+                              <Button variant="outlined" color="primary" className="mt-2" type="button">
                                 Select Image
                               </Button>
                             </>

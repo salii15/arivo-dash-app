@@ -115,8 +115,8 @@ export default function SelectProductsModal({ isOpen, onClose, isEdit, onEdit, o
 
   return (
     <div 
-      className="fixed inset-0 flex items-center justify-center z-[99999]"
-      onClick={(e) => e.stopPropagation()}
+      className="fixed inset-0 flex items-center justify-center z-[99]"
+
     >
       <div 
         className="fixed inset-0 bg-black/50" 
@@ -127,7 +127,7 @@ export default function SelectProductsModal({ isOpen, onClose, isEdit, onEdit, o
       />
       <div 
         className="relative w-full max-w-3xl mx-auto bg-base-200 p-6 rounded-lg"
-        onClick={(e) => e.stopPropagation()}
+
       >
         {isLoading ? (
           <div className="flex justify-center items-center h-64">

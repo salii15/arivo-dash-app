@@ -80,7 +80,8 @@ export default function Products() {
     <DashboardLayout>
 
 
-        <main className="flex-1 p-6">
+<main className="flex-1 p-6 flex flex-col"> {/* Added flex flex-col */}
+
           {/* Header section with buttons */}
           <div className="flex justify-between items-center mb-6">
           <PageHeader 
@@ -119,9 +120,9 @@ export default function Products() {
 
           {/* Products table */}
           <div className="bg-base-200 rounded-lg overflow-hidden max-w-full">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto h-fit">
               <table className="w-full table-fixed">
-                <thead className="bg-base-100">
+                <thead className="bg-base-100 sticky top-0">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-16">Image</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-40">Title</th>

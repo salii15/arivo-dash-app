@@ -3,8 +3,7 @@ import { Dialog } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import SelectProductsModal from './SelectProductsModal';
 import Button from '@/components/ui/Button';
-import PageHeader from '@/components/ui/PageHeader';
-import { FolderKanban } from "lucide-react";
+
 
 interface ProjectModalViewProps {
   isOpen: boolean;
@@ -61,33 +60,29 @@ export default function ProjectModalView({ isOpen, onClose, onEdit, projects, pr
     }
   };
 
-  const handleClose = () => {
-    setIsEditing(false);
-    setEditedProject({
-      title: projects.title,
-      deadline: projects.deadline,
-      notes: projects.notes,
-      product_ids: projects.product_ids
-    });
-    onClose();
-  };
-
   return (
-    <>
-      {isOpen && (
-        <div className="modal modal-open z-40">
-          <div className="modal-box bg-base-200 max-w-2xl">
-            <div className="flex justify-between items-center mb-6">
-              <PageHeader 
-                title="Edit Project"
-                description="Create your projects"
-                bgColor="bg-base-100"
-                padding='p-4'
-                icon={<FolderKanban className="w-5 h-5" />}
-              />
-              <Button variant="close" color="primary" onClick={handleClose}></Button>
+<>
+      <Dialog
+        open={isOpen}
+        onClose={onClose}
+        className="relative z-40"
+      >
+        <div className="fixed inset-0 bg-black/30 pointer-events-none" aria-hidden="true" />
+        
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="mx-auto max-w-2xl w-full bg-base-200 rounded-lg shadow-xl relative z-50">
+            <div className="flex justify-between items-center p-4 border-b border-base-300">
+              <Dialog.Title className="text-xl font-semibold text-white">
+                {isEditing ? 'Edit Project' : 'View Project'}
+              </Dialog.Title>
+              <Button
+                onClick={onClose}
+                variant='close'
+                color='primary'
+              >
+              </Button>
             </div>
-            
+
             <div className="p-6 space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-white">Project Title</label>
@@ -137,101 +132,91 @@ export default function ProjectModalView({ isOpen, onClose, onEdit, projects, pr
               </div>
 
               <div className="space-y-2">
+                
                 <label className="text-sm font-medium text-white">Selected Products</label>
                 <div className="p-2 bg-base-300 rounded text-white max-h-96 overflow-y-auto">
-                  {isEditing ? (
-                    <Button
-                      onClick={handleEditProducts}
-                      variant="solid"
-                      color="primary"
-                    >
-                      Edit Selected Products
-                    </Button>
-                  ) : (
-                    <div className="text-gray-400">No products selected</div>
-                  )}
-                  
-                  {projects.product_ids && projects.product_ids.length > 0 ? (
-                    <div className="mb-2 pb-2 border-base-300">
-                      {projects.product_ids.map(id => {
-                        const matchingProduct = products?.find(p => p.id.trim() === id.trim());
-                        return (
-                          <div key={id} className="py-1 text-sm">
-                            {matchingProduct ? (
-                              <>
-                                <span className="opacity-75">{matchingProduct.title}</span>
-                              </>
-                            ) : (
-                              <span className="opacity-50">
-                                Product not found ({id})
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-gray-400">No products selected</div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 p-4 border-t border-base-300">
                 {isEditing ? (
-                  <>
-                    <Button
-                      onClick={handleCancel}
-                      variant="solid"
-                      color="secondary"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleSave}
-                      variant="solid"
-                      color="primary"
-                    >
-                      Save
-                    </Button>
-                  </>
+    <Button
+      onClick={handleEditProducts}
+      variant="solid"
+      color="primary"
+    >
+      Edit Selected Products
+    </Button>
+  ) : (
+    <div className="text-gray-400">No products selected</div>
+  )}
+                
+                {projects.product_ids && projects.product_ids.length > 0 ? (
+                  <div className="mb-2 pb-2 border-base-300">
+                    {projects.product_ids.map(id => {
+                      const matchingProduct = products?.find(p => p.id.trim() === id.trim());
+                      return (
+                        <div key={id} className="py-1 text-sm">
+                          {matchingProduct ? (
+                            <>
+                              <span className="opacity-75">{matchingProduct.title}</span>
+                            </>
+                          ) : (
+                            <span className="opacity-50">
+                              Product not found ({id})
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : (
+                  <div className="text-gray-400">No products selected</div>
+                )}              
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 p-4 border-t border-base-300">
+              {isEditing ? (
+                <>
                   <Button
-                    onClick={() => setIsEditing(true)}
+                    onClick={handleCancel}
+                    variant="solid"
+                    color="secondary"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSave}
                     variant="solid"
                     color="primary"
                   >
-                    Edit Project
+                    Save
                   </Button>
-                )}
-              </div>
+                </>
+              ) : (
+                <Button
+                  onClick={() => setIsEditing(true)}
+                  variant="solid"
+                  color="primary"
+                >
+                  Edit Project
+                </Button>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        </Dialog.Panel>
+      </div>
+    </Dialog>
 
-      {isSelectProductsModalOpen && (
-        <div className="z-50">
-          <SelectProductsModal 
-            isOpen={isSelectProductsModalOpen}
-            onClose={() => {
-              setIsSelectProductsModalOpen(false);
-              if (onEdit) {
-                onEdit(false);
-              }
-            }}
-            isEdit={true}
-            onEdit={onEdit}
-            selectedProductIds={editedProject.product_ids}
-            onConfirm={(selectedProducts) => {
-              setEditedProject({ ...editedProject, product_ids: selectedProducts });
-              setIsSelectProductsModalOpen(false);
-              if (onEdit) {
-                onEdit(false);
-              }
-            }}
-          />
-        </div>
-      )}
-    </>
+
+    <SelectProductsModal 
+      isOpen={isSelectProductsModalOpen}
+      onClose={() => setIsSelectProductsModalOpen(false)}
+      isEdit={true}
+      onEdit={onEdit}
+      selectedProductIds={editedProject.product_ids}
+      onConfirm={(selectedProducts) => {
+        setEditedProject({ ...editedProject, product_ids: selectedProducts });
+        setIsSelectProductsModalOpen(false);
+        }}
+      />
+      </>
   );
-}
+} 

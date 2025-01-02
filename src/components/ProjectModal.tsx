@@ -97,14 +97,14 @@ export default function ProjectModal({ isOpen, onClose }: ProjectModalProps) {
     <div className="modal modal-open">
       <div className="modal-box bg-base-200 max-w-2xl">
         <div className="flex justify-between items-center mb-6">
-        <PageHeader 
+         <PageHeader 
               title="Create Project"
               description="Create your projects"
               bgColor="bg-base-100"
               padding='p-4'
               icon={<FolderKanban className="w-5 h-5" />}
-            />
-         <Button variant="close" color="primary" onClick={onClose}></Button>
+              />
+          <Button variant="close" color="primary" onClick={onClose}></Button>
         </div>
         
         <form className="space-y-6" onSubmit={handleSubmit}>

@@ -7,7 +7,7 @@ import Button from '@/components/ui/Button';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import { supabase } from '../utils/supabase';
 import ProjectModalView from '../components/ProjectModalView';
-import { Settings, BookOpen, FolderKanban, WalletCards, LayoutDashboard } from "lucide-react";
+import { Settings, BookOpen, FolderKanban, WalletCards, LayoutDashboard, Eye, Trash2 } from "lucide-react";
 import DashboardLayout from '@/pages/DashboardLayout';
 
 export default function Projects() {
@@ -85,6 +85,44 @@ export default function Projects() {
     }
   };
 
+  const handleDeleteProject = async (projectId: number) => {
+    if (window.confirm('Are you sure you want to delete this project?')) {
+      try {
+        // First verify if the project exists
+        const { data: existingProject, error: checkError } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('id', projectId)
+          .single();
+
+        if (checkError || !existingProject) {
+          console.error('Project not found:', checkError);
+          return;
+        }
+
+        // Perform the delete operation
+        const { error: deleteError } = await supabase
+          .from('projects')
+          .delete()
+          .match({ id: projectId });
+        
+        if (deleteError) {
+          console.error('Failed to delete project:', deleteError);
+          return;
+        }
+
+        // If successful, update the UI
+        console.log('Project deleted successfully');
+        setProjects(prevProjects => prevProjects.filter(project => project.id !== projectId));
+        
+        // Refresh the projects list
+        await fetchProjects();
+      } catch (error) {
+        console.error('Error in delete operation:', error);
+      }
+    }
+  };
+
   return (
     <DashboardLayout>
 
@@ -129,15 +167,16 @@ export default function Projects() {
               </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto select-none">
-              <table className="table table-zebra w-full bg-base-200">
-                <thead>
+            <div className="overflow-x-auto rounded-lg select-none">
+              <table className="table table-zebra w-full bg-base-200 rounded-lg">
+                <thead className="bg-base-100">
                   <tr className="text-white">
-                    <th className="text-white">Project Name</th>
-                    <th className="text-white">Deadline</th>
-                    <th className="text-white">Status</th>
-                    <th className="text-white">Budget</th>
-                    <th className="text-white">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-16">Project Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-16">Deadline</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-16">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-16">Budget</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-16">Product Count</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-16">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -155,16 +194,25 @@ export default function Projects() {
                         </div>
                       </td>
                       <td>${project.budget.toLocaleString()}</td>
+                      <td>{project.product_ids?.length || 0}</td>
                       <td>
-                        <button 
-                          className="btn btn-sm btn-primary"
-                          onClick={() => {
-                            setSelectedProject(project);
-                            setShowViewModal(true);
-                          }}
-                        >
-                          Edit
-                        </button>
+                        <div className="flex gap-2">
+                          <button 
+                            className="btn btn-sm btn-primary"
+                            onClick={() => {
+                              setSelectedProject(project);
+                              setShowViewModal(true);
+                            }}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button 
+                            className="btn btn-sm btn-error"
+                            onClick={() => handleDeleteProject(project.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
