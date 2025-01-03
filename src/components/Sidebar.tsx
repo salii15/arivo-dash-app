@@ -77,14 +77,14 @@ export default function Sidebar() {
       </div>
 
       <div className="p-4 border-b border-base-300">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full overflow-hidden">
+        <div className="flex items-center gap-3 select-none">
+          <div className="w-10 h-10 rounded-full overflow-hidden select-none">
             <Image 
-              src={userInfo?.src || '/logo-placeholder.png'} 
+              src={userInfo?.src || 'https://uqgrhwejkbnybsvnbauh.supabase.co/storage/v1/object/public/profile-pictures/profile-user.png'} 
               alt="Profile Picture" 
               width={40} 
               height={40}
-              className="object-cover"
+              className="object-cover select-none"
             />
           </div>
           <div>

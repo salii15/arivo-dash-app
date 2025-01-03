@@ -8,34 +8,56 @@ import DashboardLayout from '@/pages/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import { WalletCards, Plus } from "lucide-react";
 import  Button  from "@/components/ui/Button";
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
+import BillingModal from '@/components/BillingModal';
 
+// Add these styles somewhere in your CSS or create a new CSS file
+const phoneInputStyle = {
+  container: "!w-full",
+  inputClass: `!w-full !h-12 input input-bordered 
+               !pl-[48px] !rounded-lg
+               focus:!border-primary focus:!ring-primary
+               disabled:!bg-base-300 disabled:!text-base-content/50
+               !bg-base-300 !text-base-content`,
+  buttonClass: "!h-12 !rounded-lg !bg-base-300",
+  dropdownClass: "!bg-base-300 !text-base-content !rounded-lg"
+};
 
 export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState({
     display_name: '',
-    email: '',
     company: '',
     position: '',
     phone: '',
-    phone_country_code: '+90',
-    date_type: 'US/Europe',
-    currency: 'USD/EURO/TRY'
+    date_type: 'US',
+    currency: 'USD',
+    pp_url: '',
+    language: 'English'
   });
+  const [user, setUser] = useState<any>(null);
+  const [isBillingModalOpen, setIsBillingModalOpen] = useState(false);
 
   useEffect(() => {
     fetchUserData();
   }, []);
 
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    getUser();
+  }, []);
+
   const fetchUserData = async () => {
     try {
-      // Get auth user data
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) throw new Error('No user found');
 
-      // Get user_info data
       const { data: userInfo, error } = await supabase
         .from('user_info')
         .select('*')
@@ -44,18 +66,25 @@ export default function Profile() {
 
       if (error) throw error;
 
+      const phoneValue = userInfo?.phone || '';
+      console.log('Fetched phone value:', phoneValue);
+
       setUserData({
-        display_name: user.user_metadata?.display_name || '',
-        email: user.email || '',
+        display_name: userInfo?.display_name || '',
         company: userInfo?.company || '',
         position: userInfo?.position || '',
-        phone: userInfo?.phone || '',
-        phone_country_code: userInfo?.phone_country_code || '+90',
-        date_type: userInfo?.date_type || 'US/Europe',
-        currency: userInfo?.currency || 'USD/EURO/TRY'
+        phone: phoneValue,
+        date_type: userInfo?.date_type || 'US',
+        currency: userInfo?.currency || 'USD',
+        pp_url: userInfo?.pp_url || '',
+        language: userInfo?.language || 'English'
       });
     } catch (error) {
       console.error('Error fetching user data:', error);
+      setUserData(prev => ({
+        ...prev,
+        phone: ''
+      }));
     } finally {
       setLoading(false);
     }
@@ -68,31 +97,23 @@ export default function Profile() {
       
       if (!user) throw new Error('No user found');
 
-      // Format phone number (remove non-numeric characters and add country code)
-      const formattedPhone = userData.phone_country_code + userData.phone.replace(/\D/g, '');
-
-      // Update auth user metadata
-      const { error: metadataError } = await supabase.auth.updateUser({
-        data: { display_name: userData.display_name }
-      });
-
-      if (metadataError) throw metadataError;
+      const userInfoData = {
+        display_name: userData.display_name || null,
+        company: userData.company || null,
+        position: userData.position || null,
+        phone: userData.phone || null,
+        date_type: 'US',
+        currency: 'USD',
+        pp_url: userData.pp_url || null,
+        language: userData.language || 'English'
+      };
 
       // Check if user_info exists
-      const { data: existingInfo } = await supabase
+      const { data: existingInfo } = await supabase 
         .from('user_info')
         .select('*')
         .eq('user_id', user.id)
         .single();
-
-      const userInfoData = {
-        company: userData.company || null,
-        position: userData.position || null,
-        phone: formattedPhone || null,
-        phone_country_code: userData.phone_country_code || '+90',
-        date_type: userData.date_type || 'US/Europe',
-        currency: userData.currency || 'USD/EURO/TRY'
-      };
 
       if (existingInfo) {
         // Update existing user_info
@@ -130,222 +151,237 @@ export default function Profile() {
     }
   };
 
+  // Phone input handler'ı güncelle
+  const handlePhoneChange = (value: string) => {
+    console.log('Phone change value:', value);
+    setUserData(prev => ({
+      ...prev,
+      phone: value ? value.toString() : ''  // Ensure string conversion
+    }));
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      setLoading(true);
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
+
+      // Upload image to storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('profile-pictures')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('profile-pictures')
+        .getPublicUrl(fileName);
+
+      // Update user_info with new pp_url
+      const { error: updateError } = await supabase
+        .from('user_info')
+        .update({ pp_url: publicUrl })
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      // Update local state with new pp_url
+      setUserData(prev => ({ ...prev, pp_url: publicUrl }));
+      alert('Profile picture updated successfully!');
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Error uploading image. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <DashboardLayout>
-        <main className="flex-1 p-6">
-        <div className="flex justify-between items-center mb-6">
-        <PageHeader 
-              title="Profile"
-              description="View or edit your profile details"
-              bgColor="bg-base-200"
-              padding='p-4'
-              icon={<WalletCards className="w-5 h-5" />}
-            />
-            <div className="flex items-center flex-row space-x-4">
+      <main className="flex-1 p-8 max-w-4xl mx-auto">
+        {/* Profile Image Section */}
+        <div className="flex justify-center mb-8 relative">
+          <div className="w-32 h-32 rounded-full bg-base-200 flex items-center justify-center overflow-hidden">
+            {userData.pp_url ? (
+              <img 
+                src={userData.pp_url} 
+                alt="Profile" 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <Upload className="w-8 h-8 text-gray-400" />
+            )}
+          </div>
+          {isEditing && (
+            <label className="absolute bottom-0 right-0 cursor-pointer">
+              <input
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={handleImageUpload}
+              />
+              <div className="bg-primary text-white p-2 rounded-full">
+                <Edit className="w-4 h-4" />
+              </div>
+            </label>
+          )}
+        </div>
 
+        {/* Form Section */}
+        <div className="space-y-6">
+          {/* Name & Section */}
+          <div className="grid gap-6 mb-8">
+            <div className="form-control">
+              <label className="label text-base-content font-medium mb-2">Name</label>
+              <input 
+                type="text" 
+                placeholder="Enter your name"
+                value={userData.display_name}
+                onChange={(e) => setUserData({...userData, display_name: e.target.value})}  
+                className="input input-bordered h-12 bg-base-300 text-base-content disabled:bg-base-300 disabled:text-base-content/50"
+                disabled={!isEditing}
+              />
             </div>
           </div>
-          <div className="max-w-3xl mx-auto space-y-6">
-            {/* Profile Pictures Section */}
-            <div className="flex gap-6 items-start">
-              <div className="text-center space-y-2">
-                <div className="avatar placeholder">
-                  <div className="w-32 rounded-lg bg-base-300">
-                    <Upload className="w-8 h-8 text-gray-400" />
-                  </div>
-                </div>
-                <div className="text-xs text-gray-400">Upload</div>
-              </div>
-              
-              <div className="text-center space-y-2">
-                <div className="avatar placeholder">
-                  <div className="w-32 rounded-lg bg-base-300">
-                    <span className="text-3xl">U</span>
-                  </div>
-                </div>
-                <div className="text-xs text-gray-400">Current</div>
-              </div>
+
+          {/* Company & Position */}
+          <div className="grid grid-cols-2 gap-6 mb-8">
+            <div className="form-control">
+              <label className="label text-base-content font-medium mb-2">Company</label> 
+              <input 
+                type="text"
+                placeholder="Enter your company name"
+                value={userData.company}
+                onChange={(e) => setUserData({...userData, company: e.target.value})}
+                className="input input-bordered border-primary-500  bg-base-200 text-base-content h-12"
+                disabled={!isEditing}
+              />
             </div>
 
-            {/* Profile Form */}
-            <div className="space-y-4">
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text flex items-center gap-2">
-                    <User className="w-4 h-4" /> Display Name
-                  </span>
-                </label>
-                <input 
-                  type="text" 
-                  value={userData.display_name}
-                  onChange={(e) => setUserData({...userData, display_name: e.target.value})}
-                  className="input input-bordered bg-base-200 text-gray-100"
-                  disabled={!isEditing}
-                />
-              </div>
+            <div className="form-control">
+              <label className="label text-base-content font-medium mb-2">Position</label>
+              <input 
+                type="text"
+                placeholder="Enter your position"
+                value={userData.position}
+                onChange={(e) => setUserData({...userData, position: e.target.value})}
+                className="input input-bordered border-primary-500  bg-base-200 text-gray-900 h-12"
+                disabled={!isEditing}
+              />
+            </div>
+          </div>
 
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text flex items-center gap-2">
-                    <Mail className="w-4 h-4" /> Email
-                  </span>
-                </label>
+          {/* Phone & Language (assuming we're adding language as shown in the image) */}
+          <div className="grid grid-cols-2 gap-6 mb-8">
+            <div className="form-control">
+              <label className="label text-base-content font-medium mb-2">Phone Number</label>
+              {isEditing ? (
+                <PhoneInput
+                  country={'tr'}
+                  value={userData.phone ? userData.phone.toString() : ''}  // Ensure string conversion
+                  onChange={handlePhoneChange}
+                  containerClass={phoneInputStyle.container}
+                  inputClass={phoneInputStyle.inputClass}
+                  buttonClass={phoneInputStyle.buttonClass}
+                  dropdownClass={phoneInputStyle.dropdownClass}
+                  disabled={false}
+                  inputProps={{
+                    name: 'phone',
+                    required: true,
+                    autoFocus: false
+                  }}
+                />
+              ) : (
                 <input 
-                  type="email" 
-                  value={userData.email}
-                  className="input input-bordered bg-base-200 text-gray-100"
+                  type="text"
+                  value={userData.phone || ''}
+                  className="input input-bordered h-12 bg-base-300 text-base-content disabled:bg-base-300 disabled:text-base-content/50"
                   disabled={true}
                 />
-              </div>
+              )}
+            </div>
 
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text flex items-center gap-2">
-                    <Building className="w-4 h-4" /> Company
-                  </span>
-                </label>
-                <input 
-                  type="text" 
-                  value={userData.company}
-                  onChange={(e) => setUserData({...userData, company: e.target.value})}
-                  className="input input-bordered bg-base-200 text-gray-100"
-                  disabled={!isEditing}
-                />
-              </div>
-
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text flex items-center gap-2">
-                    <Briefcase className="w-4 h-4" /> Position
-                  </span>
-                </label>
-                <input 
-                  type="text" 
-                  value={userData.position}
-                  onChange={(e) => setUserData({...userData, position: e.target.value})}
-                  className="input input-bordered bg-base-200 text-gray-100"
-                  disabled={!isEditing}
-                />
-              </div>
-
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text flex items-center gap-2">
-                    <Phone className="w-4 h-4" /> Phone
-                  </span>
-                </label>
-                <div className="flex gap-2">
-                  <select 
-                    value={userData.phone_country_code}
-                    onChange={(e) => setUserData({...userData, phone_country_code: e.target.value})}
-                    className="select select-bordered bg-base-200 text-gray-100 w-28"
-                    disabled={!isEditing}
-                  >
-                    <option value="+90">🇹🇷 +90</option>
-                    <option value="+1">🇺🇸 +1</option>
-                    <option value="+44">🇬🇧 +44</option>
-                    <option value="+49">🇩🇪 +49</option>
-                    <option value="+33">🇫🇷 +33</option>
-                    <option value="+39">🇮🇹 +39</option>
-                  </select>
-                  <input 
-                    type="tel" 
-                    value={userData.phone}
-                    onChange={(e) => {
-                      const numbers = e.target.value.replace(/\D/g, '');
-                      let formatted = numbers;
-                      
-                      if (userData.phone_country_code === '+90' && numbers.length <= 10) {
-                        formatted = numbers.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3');
-                      }
-                      else if (numbers.length <= 10) {
-                        formatted = numbers.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
-                      }
-                      
-                      setUserData({...userData, phone: formatted});
-                    }}
-                    placeholder="(5XX) XXX-XXXX"
-                    className="input input-bordered bg-base-200 text-gray-100 flex-1"
-                    disabled={!isEditing}
-                  />
-                </div>
-              </div>
-
-              {/* Date Type and Currency */}
-              <div className="flex gap-4">
-                <div className="form-control flex-1">
-                  <label className="label">
-                    <span className="label-text">Date Type</span>
-                  </label>
-                  <select 
-                    value={userData.date_type}
-                    onChange={(e) => setUserData({...userData, date_type: e.target.value})}
-                    className="select select-bordered bg-base-200 text-gray-100"
-                    disabled={!isEditing}
-                  >
-                    <option className="text-gray-100">US/Europe</option>
-                    <option className="text-gray-100">Asia/Pacific</option>
-                  </select>
-                </div>
-                <div className="form-control flex-1">
-                  <label className="label">
-                    <span className="label-text">Currency</span>
-                  </label>
-                  <select 
-                    value={userData.currency}
-                    onChange={(e) => setUserData({...userData, currency: e.target.value})}
-                    className="select select-bordered bg-base-200 text-gray-100"
-                    disabled={!isEditing}
-                  >
-                    <option className="text-gray-100">USD/EURO/TRY</option>
-                    <option className="text-gray-100">GBP/JPY/AUD</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Billing Details */}
-              <div className="form-control">
-                <button className="btn btn-outline gap-2">
-                  <Wallet className="w-4 h-4" />
-                  Billing Details
-                </button>
-              </div>
-
-              {/* Edit/Update Profile Button */}
-              <div className="form-control mt-6">
-                {!isEditing ? (
-                  <button 
-                    className="btn btn-primary gap-2"
-                    onClick={() => setIsEditing(true)}
-                  >
-                    <Edit className="w-4 h-4" />
-                    Edit Profile
-                  </button>
-                ) : (
-                  <div className="flex gap-2">
-                    <button 
-                      className="btn btn-outline flex-1"
-                      onClick={() => {
-                        setIsEditing(false);
-                        fetchUserData(); // Reset form
-                      }}
-                    >
-                      Cancel
-                    </button>
-                    <button 
-                      className="btn btn-primary flex-1"
-                      onClick={handleUpdate}
-                      disabled={loading}
-                    >
-                      {loading ? 'Updating...' : 'Update Profile'}
-                    </button>
-                  </div>
-                )}
-              </div>
+            <div className="form-control">
+              <label className="label text-base-content font-medium mb-2">Language</label>
+              <select 
+                value={userData.language}
+                onChange={(e) => setUserData({...userData, language: e.target.value})}
+                className="select select-bordered h-12 w-full bg-base-300 text-base-content disabled:bg-base-300 disabled:text-base-content/50"
+                disabled={!isEditing}
+              >
+                <option value="English">English</option>
+                <option value="Turkish">Turkish</option>
+              </select>
             </div>
           </div>
-        </main>
-        </DashboardLayout>
+
+          {/* Date & Currency Type */}
+          <div className="grid grid-cols-2 gap-6 mb-8">
+            <div className="form-control">
+              <label className="label text-base-content font-medium mb-2">Date Type</label>
+              <select 
+                value={userData.date_type}
+                onChange={(e) => setUserData({...userData, date_type: e.target.value})}
+                className="select select-bordered h-12 w-full bg-base-300 text-base-content disabled:bg-base-300 disabled:text-base-content/50"
+                disabled={!isEditing}
+              >
+                <option value="US">US</option>
+                <option value="EU">EU</option>
+              </select>
+            </div>
+
+            <div className="form-control">
+              <label className="label text-base-content font-medium mb-2">Currency Type</label>
+              <select 
+                value={userData.currency}
+                onChange={(e) => setUserData({...userData, currency: e.target.value})}
+                className="select select-bordered bg-white text-gray-900 h-12 w-full"
+                disabled={!isEditing}
+              >
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="TRY">TRY</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="grid grid-cols-2 gap-6">
+            <button 
+              className="btn btn-primary h-12 text-white"
+              onClick={() => {
+                if (isEditing) {
+                  handleUpdate(); // Save changes
+                } else {
+                  setIsEditing(true); // Enter edit mode
+                }
+              }}
+            >
+              {isEditing ? 'Save Profile' : 'Edit Profile'}
+            </button>
+            <button 
+              className="btn btn-primary h-12 text-white"
+              onClick={() => setIsBillingModalOpen(true)}
+            >
+              Billing Settings
+            </button>
+          </div>
+        </div>
+      </main>
+      <BillingModal 
+        isOpen={isBillingModalOpen}
+        onClose={() => setIsBillingModalOpen(false)}
+      />
+    </DashboardLayout>
   );
 } 
 
