@@ -48,8 +48,9 @@ export default function ProjectModal({ isOpen, onClose }: ProjectModalProps) {
         notes: note,
         user_id: user.id,
         product_ids: selectedProductIds,
-        status: 'On Going',
-        budget: 0
+        status: 'Pending',
+        budget: 0,
+        approved: false
       };
       console.log('Sending project data:', projectData);
 
@@ -162,7 +163,7 @@ export default function ProjectModal({ isOpen, onClose }: ProjectModalProps) {
             <label className="label">
               <span className="label-text">Selected Products</span>
             </label>
-            <div className="text-sm">
+            <div className="text-sm text-blue-500">
               {selectedProductCount} products selected
             </div>
           </div>

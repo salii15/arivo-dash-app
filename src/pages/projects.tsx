@@ -7,8 +7,9 @@ import Button from '@/components/ui/Button';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import { supabase } from '../utils/supabase';
 import ProjectModalView from '../components/ProjectModalView';
-import { Settings, BookOpen, FolderKanban, WalletCards, LayoutDashboard, Eye, Trash2 } from "lucide-react";
+import { Settings, BookOpen, FolderKanban, WalletCards, LayoutDashboard, Eye, Trash2, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, Wand2 } from "lucide-react";
 import DashboardLayout from '@/pages/DashboardLayout';
+import AiProjectModal from '@/components/AiProjectModal';
 
 export default function Projects() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -17,6 +18,9 @@ export default function Projects() {
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [showAiModal, setShowAiModal] = useState(false);
 
   useEffect(() => {
     fetchProjects();
@@ -33,7 +37,8 @@ export default function Projects() {
     try {
       const { data: projectData, error } = await supabase
         .from('projects')
-        .select('*');
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setProjects(projectData || []);
@@ -88,19 +93,28 @@ export default function Projects() {
   const handleDeleteProject = async (projectId: number) => {
     if (window.confirm('Are you sure you want to delete this project?')) {
       try {
-        // First verify if the project exists
-        const { data: existingProject, error: checkError } = await supabase
-          .from('projects')
-          .select('*')
-          .eq('id', projectId)
-          .single();
+        // First check if project is referenced in any orders
+        const { data: orderData, error: orderError } = await supabase
+          .from('orders')
+          .select('projects')
+          .not('projects', 'is', null);
 
-        if (checkError || !existingProject) {
-          console.error('Project not found:', checkError);
+        if (orderError) {
+          console.error('Error checking orders:', orderError);
           return;
         }
 
-        // Perform the delete operation
+        // Check if project exists in any order's projects array
+        const isProjectInUse = orderData.some(order => 
+          order.projects && order.projects.includes(projectId)
+        );
+
+        if (isProjectInUse) {
+          alert('This project cannot be deleted because it is associated with an existing order.');
+          return;
+        }
+
+        // If project is not in use, proceed with deletion
         const { error: deleteError } = await supabase
           .from('projects')
           .delete()
@@ -111,126 +125,253 @@ export default function Projects() {
           return;
         }
 
-        // If successful, update the UI
-        console.log('Project deleted successfully');
+        // Update UI after successful deletion
         setProjects(prevProjects => prevProjects.filter(project => project.id !== projectId));
-        
-        // Refresh the projects list
         await fetchProjects();
+
       } catch (error) {
         console.error('Error in delete operation:', error);
       }
     }
   };
 
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentProjects = projects.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(projects.length / itemsPerPage);
+
   return (
     <DashboardLayout>
-
-<main className="flex-1 p-6">
-          <div className="flex justify-between items-center mb-6">
-            <PageHeader 
-              title="Projects"
-              description="Manage and organize your projects"
-              bgColor="bg-base-200"
-              padding='p-4'
-              icon={<FolderKanban className="w-5 h-5" />}
-            />
-            <Button 
-              onClick={() => setShowCreateModal(true)}
-              variant='solid'
-              color='primary'
-              icon={PlusIcon}
-            >
-              New Project
-            </Button>
-          </div>
-
-          <ProjectModal 
-            isOpen={showCreateModal}
-            onClose={() => setShowCreateModal(false)}
+      <main className="flex-1 p-6 flex flex-col h-[calc(100vh-80px)]">
+        <div className="flex justify-between items-center mb-6">
+          <PageHeader 
+            title="Projects"
+            description="Manage and organize your projects"
+            bgColor="bg-base-200"
+            padding='p-4'
+            icon={<FolderKanban className="w-5 h-5" />}
           />
-          
-          {loading ? (
-            <div className="flex justify-center">
-              <span className="loading loading-spinner loading-lg text-primary"></span>
-            </div>
-          ) : projects.length === 0 ? (
-            <div className="text-center mt-8">
-              <p className="text-base-content text-lg mb-4">No projects found</p>
-              <Button
-                onClick={() => setShowCreateModal(true)}
-                variant="outlined"
-                color="primary"
-                icon={PlusIcon}
-              >
-                Create Your First Project
-              </Button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto rounded-lg select-none">
-              <table className="table table-zebra w-full bg-base-200 rounded-lg">
+          <Button 
+            onClick={() => setShowCreateModal(true)}
+            variant='solid'
+            color='primary'
+            icon={PlusIcon}
+          >
+            New Project
+          </Button>
+        </div>
+
+        <ProjectModal 
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+        />
+        
+        <div className="flex flex-col h-[calc(100%-80px)]">
+          <div className="flex-1 bg-base-200 rounded-lg overflow-hidden">
+            <div className="h-full overflow-y-auto">
+              <table className="w-full">
                 <thead className="bg-base-100">
                   <tr className="text-white">
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-16">Project Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-16">Deadline</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-16">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-16">Budget</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-16">Product Count</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-16">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-1/4">Project Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-1/6">Deadline</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-1/6">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-1/6">Budget</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-1/6">Product Count</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-1/6">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {projects.map((project) => (
-                    <tr key={project.id} className="hover:bg-base-300 text-white">
-                      <td className="font-medium">{project.title}</td>
-                      <td>{new Date(project.deadline).toLocaleDateString()}</td>
-                      <td>
-                        <div className={`badge ${
-                          project.status === 'On Going' ? 'badge-warning' :
-                          project.status === 'Completed' ? 'badge-success' :
-                          'badge-error'
-                        }`}>
-                          {project.status}
-                        </div>
-                      </td>
-                      <td>${project.budget.toLocaleString()}</td>
-                      <td>{project.product_ids?.length || 0}</td>
-                      <td>
-                        <div className="flex gap-2">
-                          <button 
-                            className="btn btn-sm btn-primary"
-                            onClick={() => {
-                              setSelectedProject(project);
-                              setShowViewModal(true);
-                            }}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button 
-                            className="btn btn-sm btn-error"
-                            onClick={() => handleDeleteProject(project.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                <tbody className="divide-y divide-base-200">
+                  {loading ? (
+                    <>
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <tr key={i} className="animate-pulse">
+                          <td className="px-6 py-4"><div className="h-4 bg-base-300 rounded w-3/4"></div></td>
+                          <td className="px-6 py-4"><div className="h-4 bg-base-300 rounded w-24"></div></td>
+                          <td className="px-6 py-4"><div className="h-8 bg-base-300 rounded w-20"></div></td>
+                          <td className="px-6 py-4"><div className="h-4 bg-base-300 rounded w-24"></div></td>
+                          <td className="px-6 py-4"><div className="h-8 bg-base-300 rounded w-12"></div></td>
+                          <td className="px-6 py-4"><div className="h-8 bg-base-300 rounded w-20"></div></td>
+                        </tr>
+                      ))}
+                    </>
+                  ) : projects.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-4 text-center text-gray-400">
+                        No projects found
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    currentProjects.map((project) => (
+                      <tr key={project.id} className="hover:bg-base-300 text-white">
+                        <td className="px-6 py-4 font-medium">{project.title}</td>
+                        <td className="px-6 py-4">{new Date(project.deadline).toLocaleDateString()}</td>
+                        <td className="px-6 py-4">
+                          <div className={`badge text-black p-3 ${
+                            project.status === 'On Going' ? 'bg-orange-500' :
+                            project.status === 'Completed' ? 'bg-green-500' :
+                            project.status === 'Pending' ? 'bg-blue-400' :
+                            project.status === 'Quoted' ? 'bg-purple-500' :
+                            project.status === 'Canceled' ? 'bg-red-500' :
+                            'bg-gray-500'
+                          }`}>
+                            {project.status}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          {project.budget === 0 ? (
+                            <button 
+                              className="btn btn-sm bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 border-none"
+                              onClick={() => {
+                                setSelectedProject(project);
+                                setShowAiModal(true);
+                              }}
+                            >
+                              <Wand2 className="w-4 h-4 mr-1" />
+                              Get Quote
+                            </button>
+                          ) : (
+                            `$${project.budget.toLocaleString()}`
+                          )}
+                        </td>
+                        <td className="px-10 py-4 text-center">
+                          <div className="flex justify-center items-center py-1 w-auto bg-base-300 rounded-lg">
+                            {project.product_ids?.length || 0}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex gap-2">
+                            <button 
+                              className="btn btn-sm btn-primary"
+                              onClick={() => {
+                                setSelectedProject(project);
+                                setShowViewModal(true);
+                              }}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button 
+                              className="btn btn-sm btn-error"
+                              onClick={() => handleDeleteProject(project.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
-          )}
-        </main>
-        {selectedProject && (
-        <ProjectModalView
-          isOpen={showViewModal}
-          onClose={() => setShowViewModal(false)}
-          projects={selectedProject}
-          products={products}
-          onSave={handleSaveProject}
-        />
-      )}
-    </DashboardLayout>
+          </div>
 
+          <div className="mt-4 bg-base-200 p-4 rounded-lg flex-shrink-0">
+            <div className="flex justify-between items-center">
+              <div className="text-sm text-gray-300">
+                Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, projects.length)} of {projects.length} projects
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  className="btn btn-sm btn-primary"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronsLeft className="w-6 h-6" />
+                </button>
+
+                <button 
+                  className="btn btn-sm btn-primary"
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+
+                <div className="flex gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => {
+                    if (totalPages > 7) {
+                      if (
+                        pageNumber === 1 ||
+                        pageNumber === totalPages ||
+                        (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                      ) {
+                        return (
+                          <button
+                            key={pageNumber}
+                            className={`btn btn-sm ${
+                              pageNumber === currentPage 
+                                ? 'btn-primary' 
+                                : 'btn-outline btn-primary'
+                            }`}
+                            onClick={() => setCurrentPage(pageNumber)}
+                          >
+                            {pageNumber}
+                          </button>
+                        );
+                      } else if (
+                        pageNumber === currentPage - 2 ||
+                        pageNumber === currentPage + 2
+                      ) {
+                        return <span key={pageNumber} className="text-gray-400 px-1">...</span>;
+                      }
+                      return null;
+                    }
+
+                    return (
+                      <button
+                        key={pageNumber}
+                        className={`btn btn-sm ${
+                          pageNumber === currentPage 
+                            ? 'btn-primary' 
+                            : 'btn-outline btn-primary'
+                        }`}
+                        onClick={() => setCurrentPage(pageNumber)}
+                      >
+                        {pageNumber}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button 
+                  className="btn btn-sm btn-primary"
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+
+                <button 
+                  className="btn btn-sm btn-primary"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronsRight className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {selectedProject && (
+          <ProjectModalView
+            isOpen={showViewModal}
+            onClose={() => setShowViewModal(false)}
+            projects={selectedProject}
+            products={products}
+            onSave={handleSaveProject}
+          />
+        )}
+
+        {selectedProject && (
+          <AiProjectModal
+            isOpen={showAiModal}
+            onClose={() => setShowAiModal(false)}
+            project={selectedProject}
+            products={products}
+          />
+        )}
+      </main>
+    </DashboardLayout>
   );
 } 

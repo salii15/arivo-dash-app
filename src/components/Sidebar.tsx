@@ -66,6 +66,8 @@ export default function Sidebar() {
     { title: 'Projects', path: '/projects', icon: <FolderKanban className="w-5 h-5" /> },
     { title: 'Orders', path: '/orders', icon: <WalletCards className="w-5 h-5" /> },
     { title: 'Analytics', path: '/analytics', icon: <ChartColumnBig className="w-5 h-5" /> },
+    { type: 'divider' },
+    { title: 'AI Tools', path: '/ai-tools', icon: <Settings className="w-5 h-5" /> },
   ];
 
   return (
@@ -99,19 +101,22 @@ export default function Sidebar() {
       </div>
       
       <ul className="menu p-4 space-y-2">
-        {menuItems.map((item) => (
-          <li key={item.path}>
-            <Link
-              href={item.path}
-              className={`flex items-center gap-3 p-3 rounded-lg hover:bg-primary/20 transition-colors ${
-                router.pathname === item.path ? 'bg-secondary-800 text-white' : 'text-gray-300'
-              }`}
-            >
-              <span className="text-primary-900">{item.icon}</span>
-
-              <span>{item.title}</span>
-            </Link>
-          </li>
+        {menuItems.map((item, index) => (
+          item.type === 'divider' ? (
+            <li key={`divider-${index}`} className="h-px bg-base-300 my-2" />
+          ) : (
+            <li key={item.path}>
+              <Link
+                href={item.path || ''}
+                className={`flex items-center gap-3 p-3 rounded-lg hover:bg-primary/20 transition-colors ${
+                  router.pathname === item.path ? 'bg-secondary-800 text-white' : 'text-gray-300'
+                }`}
+              >
+                <span className="text-primary-900">{item.icon}</span>
+                <span>{item.title}</span>
+              </Link>
+            </li>
+          )
         ))}
       </ul>
     </div>

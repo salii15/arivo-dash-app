@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
-import { User, Mail, Building, Briefcase, Phone, Upload, Wallet, Edit } from 'lucide-react';
+import { User, Mail, Building, Briefcase, Phone, Upload, Wallet, Edit, Save, CreditCard } from 'lucide-react';
 import { supabase } from '@/utils/supabase';
 
 import DashboardLayout from '@/pages/DashboardLayout';
@@ -11,18 +11,6 @@ import  Button  from "@/components/ui/Button";
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import BillingModal from '@/components/BillingModal';
-
-// Add these styles somewhere in your CSS or create a new CSS file
-const phoneInputStyle = {
-  container: "!w-full",
-  inputClass: `!w-full !h-12 input input-bordered 
-               !pl-[48px] !rounded-lg
-               focus:!border-primary focus:!ring-primary
-               disabled:!bg-base-300 disabled:!text-base-content/50
-               !bg-base-300 !text-base-content`,
-  buttonClass: "!h-12 !rounded-lg !bg-base-300",
-  dropdownClass: "!bg-base-300 !text-base-content !rounded-lg"
-};
 
 export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
@@ -39,6 +27,17 @@ export default function Profile() {
   });
   const [user, setUser] = useState<any>(null);
   const [isBillingModalOpen, setIsBillingModalOpen] = useState(false);
+
+  const phoneInputStyle = {
+    container: "!w-full",
+    inputClass: `!w-full !h-12 input input-bordered 
+                 !pl-[48px] !rounded-lg
+                 focus:!border-primary-500 focus:!ring-primary-500
+                 disabled:!bg-base-300 disabled:!text-base-content/50
+                 !bg-base-100 ${isEditing ? '!text-primary-600 !border-primary-500' : '!text-base-content'}`,
+    buttonClass: "!h-12 !rounded-lg !bg-base-100 !border-primary-500",
+    dropdownClass: "!bg-base-100 !text-base-content !rounded-lg"
+  };
 
   useEffect(() => {
     fetchUserData();
@@ -209,171 +208,244 @@ export default function Profile() {
     <DashboardLayout>
       <main className="flex-1 p-8 max-w-4xl mx-auto">
         {/* Profile Image Section */}
-        <div className="flex justify-center mb-8 relative">
-          <div className="w-32 h-32 rounded-full bg-base-200 flex items-center justify-center overflow-hidden">
-            {userData.pp_url ? (
-              <img 
-                src={userData.pp_url} 
-                alt="Profile" 
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <Upload className="w-8 h-8 text-gray-400" />
-            )}
-          </div>
-          {isEditing && (
-            <label className="absolute bottom-0 right-0 cursor-pointer">
-              <input
-                type="file"
-                className="hidden"
-                accept="image/*"
-                onChange={handleImageUpload}
-              />
-              <div className="bg-primary text-white p-2 rounded-full">
-                <Edit className="w-4 h-4" />
-              </div>
-            </label>
-          )}
-        </div>
-
-        {/* Form Section */}
-        <div className="space-y-6">
-          {/* Name & Section */}
-          <div className="grid gap-6 mb-8">
-            <div className="form-control">
-              <label className="label text-base-content font-medium mb-2">Name</label>
-              <input 
-                type="text" 
-                placeholder="Enter your name"
-                value={userData.display_name}
-                onChange={(e) => setUserData({...userData, display_name: e.target.value})}  
-                className="input input-bordered h-12 bg-base-300 text-base-content disabled:bg-base-300 disabled:text-base-content/50"
-                disabled={!isEditing}
-              />
-            </div>
-          </div>
-
-          {/* Company & Position */}
-          <div className="grid grid-cols-2 gap-6 mb-8">
-            <div className="form-control">
-              <label className="label text-base-content font-medium mb-2">Company</label> 
-              <input 
-                type="text"
-                placeholder="Enter your company name"
-                value={userData.company}
-                onChange={(e) => setUserData({...userData, company: e.target.value})}
-                className="input input-bordered border-primary-500  bg-base-200 text-base-content h-12"
-                disabled={!isEditing}
-              />
-            </div>
-
-            <div className="form-control">
-              <label className="label text-base-content font-medium mb-2">Position</label>
-              <input 
-                type="text"
-                placeholder="Enter your position"
-                value={userData.position}
-                onChange={(e) => setUserData({...userData, position: e.target.value})}
-                className="input input-bordered border-primary-500  bg-base-200 text-gray-900 h-12"
-                disabled={!isEditing}
-              />
-            </div>
-          </div>
-
-          {/* Phone & Language (assuming we're adding language as shown in the image) */}
-          <div className="grid grid-cols-2 gap-6 mb-8">
-            <div className="form-control">
-              <label className="label text-base-content font-medium mb-2">Phone Number</label>
-              {isEditing ? (
-                <PhoneInput
-                  country={'tr'}
-                  value={userData.phone ? userData.phone.toString() : ''}  // Ensure string conversion
-                  onChange={handlePhoneChange}
-                  containerClass={phoneInputStyle.container}
-                  inputClass={phoneInputStyle.inputClass}
-                  buttonClass={phoneInputStyle.buttonClass}
-                  dropdownClass={phoneInputStyle.dropdownClass}
-                  disabled={false}
-                  inputProps={{
-                    name: 'phone',
-                    required: true,
-                    autoFocus: false
-                  }}
+        <div className={`p-6 rounded-2xl bg-base-200 ${isEditing ? 'bg-base-200/50' : ''}`}>
+          <div className="flex justify-center mb-8 relative {isEditing}">
+            <div className="w-32 h-32 rounded-full bg-base-200 flex items-center justify-center overflow-hidden">
+              {userData.pp_url ? (
+                <img 
+                  src={userData.pp_url} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
                 />
               ) : (
-                <input 
-                  type="text"
-                  value={userData.phone || ''}
-                  className="input input-bordered h-12 bg-base-300 text-base-content disabled:bg-base-300 disabled:text-base-content/50"
-                  disabled={true}
-                />
+                <Upload className="w-8 h-8 text-gray-400" />
               )}
             </div>
-
-            <div className="form-control">
-              <label className="label text-base-content font-medium mb-2">Language</label>
-              <select 
-                value={userData.language}
-                onChange={(e) => setUserData({...userData, language: e.target.value})}
-                className="select select-bordered h-12 w-full bg-base-300 text-base-content disabled:bg-base-300 disabled:text-base-content/50"
-                disabled={!isEditing}
-              >
-                <option value="English">English</option>
-                <option value="Turkish">Turkish</option>
-              </select>
-            </div>
+            {isEditing && (
+              <label className="absolute -bottom-12 left-1/2 -translate-x-1/2 cursor-pointer">
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                />
+                <div className="btn btn-primary btn-sm gap-2">
+                  <Edit className="w-4 h-4" />
+                  Select Image
+                </div>
+              </label>
+            )}
           </div>
 
-          {/* Date & Currency Type */}
-          <div className="grid grid-cols-2 gap-6 mb-8">
-            <div className="form-control">
-              <label className="label text-base-content font-medium mb-2">Date Type</label>
-              <select 
-                value={userData.date_type}
-                onChange={(e) => setUserData({...userData, date_type: e.target.value})}
-                className="select select-bordered h-12 w-full bg-base-300 text-base-content disabled:bg-base-300 disabled:text-base-content/50"
-                disabled={!isEditing}
-              >
-                <option value="US">US</option>
-                <option value="EU">EU</option>
-              </select>
-            </div>
+          {/* Form Section */}
+          <div className={`space-y-6 p-6 rounded-lg ${isEditing ? 'bg-base-300/50' : ''}`}>
+            {loading ? (
+              <div className="space-y-6">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="animate-pulse space-y-2">
+                    <div className="h-4 bg-base-300 rounded w-1/4"></div>
+                    <div className="h-12 bg-base-300 rounded"></div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                {/* Name & Section */}
+                <div className="grid gap-6 mb-8">
+                  <div className="form-control">
+                    <label className="label text-base-content font-medium mb-2">Name</label>
+                    <input 
+                      type="text" 
+                      placeholder="Enter your name"
+                      value={userData.display_name}
+                      onChange={(e) => setUserData({...userData, display_name: e.target.value})}  
+                      className={`input input-bordered h-12 
+                        ${isEditing 
+                          ? 'bg-base-100 text-primary-600 border-primary-500' 
+                          : 'bg-base-300 text-base-content'
+                        } 
+                        disabled:bg-base-300 disabled:text-base-content/50`}
+                      disabled={!isEditing}
+                    />
+                  </div>
+                </div>
 
-            <div className="form-control">
-              <label className="label text-base-content font-medium mb-2">Currency Type</label>
-              <select 
-                value={userData.currency}
-                onChange={(e) => setUserData({...userData, currency: e.target.value})}
-                className="select select-bordered bg-white text-gray-900 h-12 w-full"
-                disabled={!isEditing}
-              >
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="TRY">TRY</option>
-              </select>
-            </div>
-          </div>
+                {/* Company & Position */}
+                <div className="grid grid-cols-2 gap-6 mb-8">
+                  <div className="form-control">
+                    <label className="label text-base-content font-medium mb-2">Company</label> 
+                    <input 
+                      type="text"
+                      placeholder="Enter your company name"
+                      value={userData.company}
+                      onChange={(e) => setUserData({...userData, company: e.target.value})}
+                      className={`input input-bordered h-12 
+                        ${isEditing 
+                          ? 'bg-base-100 text-primary-600 border-primary-500' 
+                          : 'bg-base-300 text-base-content/70'
+                        } 
+                        disabled:bg-base-300 disabled:text-base-content/50`}
+                      disabled={!isEditing}
+                    />
+                  </div>
 
-          {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-6">
-            <button 
-              className="btn btn-primary h-12 text-white"
-              onClick={() => {
-                if (isEditing) {
-                  handleUpdate(); // Save changes
-                } else {
-                  setIsEditing(true); // Enter edit mode
-                }
-              }}
-            >
-              {isEditing ? 'Save Profile' : 'Edit Profile'}
-            </button>
-            <button 
-              className="btn btn-primary h-12 text-white"
-              onClick={() => setIsBillingModalOpen(true)}
-            >
-              Billing Settings
-            </button>
+                  <div className="form-control">
+                    <label className="label text-base-content font-medium mb-2">Position</label>
+                    <input 
+                      type="text"
+                      placeholder="Enter your position"
+                      value={userData.position}
+                      onChange={(e) => setUserData({...userData, position: e.target.value})}
+                      className={`input input-bordered h-12 
+                        ${isEditing 
+                          ? 'bg-base-100 text-primary-600 border-primary-500' 
+                          : 'bg-base-300 text-base-content/70'
+                        } 
+                        disabled:bg-base-300 disabled:text-base-content/50`}
+                      disabled={!isEditing}
+                    />
+                  </div>
+                </div>
+
+                {/* Phone & Language (assuming we're adding language as shown in the image) */}
+                <div className="grid grid-cols-2 gap-6 mb-8">
+                  <div className="form-control">
+                    <label className="label text-base-content font-medium mb-2">Phone Number</label>
+                    {isEditing ? (
+                      <PhoneInput
+                        country={'tr'}
+                        value={userData.phone ? userData.phone.toString() : ''}  // Ensure string conversion
+                        onChange={handlePhoneChange}
+                        containerClass={phoneInputStyle.container}
+                        inputClass={phoneInputStyle.inputClass}
+                        buttonClass={phoneInputStyle.buttonClass}
+                        dropdownClass={phoneInputStyle.dropdownClass}
+                        disabled={false}
+                        inputProps={{
+                          name: 'phone',
+                          required: true,
+                          autoFocus: false
+                        }}
+                      />
+                    ) : (
+                      <input 
+                        type="text"
+                        value={userData.phone || ''}
+                        className="input input-bordered h-12 bg-base-300 text-base-content disabled:bg-base-300 disabled:text-base-content/50"
+                        disabled={true}
+                      />
+                    )}
+                  </div>
+
+                  <div className="form-control">
+                    <label className="label text-base-content font-medium mb-2">Language</label>
+                    <select 
+                      value={userData.language}
+                      onChange={(e) => setUserData({...userData, language: e.target.value})}
+                      className={`select select-bordered h-12 w-full 
+                        ${isEditing 
+                          ? 'bg-base-100 text-primary-600 border-primary-500' 
+                          : 'bg-base-300 text-base-content'
+                        } 
+                        disabled:bg-base-300 disabled:text-base-content/50`}
+                      disabled={!isEditing}
+                    >
+                      <option value="English">English</option>
+                      <option value="Turkish">Turkish</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Date & Currency Type */}
+                <div className="grid grid-cols-2 gap-6 mb-8">
+                  <div className="form-control">
+                    <label className="label text-base-content font-medium mb-2">Date Type</label>
+                    <select 
+                      value={userData.date_type}
+                      onChange={(e) => setUserData({...userData, date_type: e.target.value})}
+                      className="select select-bordered h-12 w-full bg-base-100 text-primary-600 border-primary-500 disabled:bg-base-300 disabled:text-base-content/50"
+                      disabled={!isEditing}
+                    >
+                      <option value="US">US</option>
+                      <option value="EU">EU</option>
+                    </select>
+                  </div>
+
+                  <div className="form-control">
+                    <label className="label text-base-content font-medium mb-2">Currency Type</label>
+                    <select 
+                      value={userData.currency}
+                      onChange={(e) => setUserData({...userData, currency: e.target.value})}
+                      className={`select select-bordered h-12 w-full 
+                        ${isEditing 
+                          ? 'bg-base-100 text-primary-600 border-primary-500' 
+                          : 'bg-base-300 text-base-content'
+                        } 
+                        disabled:bg-base-300 disabled:text-base-content/50`}
+                      disabled={!isEditing}
+                    >
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                      <option value="TRY">TRY</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="grid grid-cols-2 gap-6">
+                  {!isEditing && (
+                    <Button 
+                      variant="solid"
+                      color="primary"
+                      onClick={() => setIsBillingModalOpen(true)}
+                      className="gap-2"
+                    >
+                      <CreditCard size={18} />
+                      Billing Profile
+                    </Button>
+                  )}
+                  
+                  <div className={`grid ${isEditing ? 'grid-cols-2' : 'grid-cols-1'} gap-6 ${!isEditing ? 'col-start-2' : 'col-span-2 justify-end'}`}>
+                    <Button 
+                      variant="solid"
+                      color="primary"
+                      onClick={() => {
+                        if (isEditing) {
+                          handleUpdate();
+                        } else {
+                          setIsEditing(true);
+                        }
+                      }}
+                      className="gap-2"
+                    >
+                      {isEditing ? (
+                        <>
+                          <Save size={18} />
+                          Save Profile
+                        </>
+                      ) : (
+                        <>
+                          <Edit size={18} />
+                          Edit Profile
+                        </>
+                      )}
+                    </Button>
+                    {isEditing && (
+                      <Button 
+                        variant="outlined"
+                        color="primary"
+                        onClick={() => {
+                          setIsEditing(false);
+                          fetchUserData();
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </main>

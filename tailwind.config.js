@@ -41,6 +41,14 @@ module.exports = {
           800: '#7557D5',  // Darker lavender
           900: '#5F40CD',  // En koyu lavender
         },
+        pink: {
+          500: '#FF0080',  // Base pink
+          600: '#E60073',  // Darker pink
+          700: '#C70066',  // Darker pink
+          800: '#A80059',  // Darker pink
+          900: '#8A004D',  // Darker pink
+        },
+        
         dark: '#0a0a0a',
         'dark-light': '#171717',
       },
