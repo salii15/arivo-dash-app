@@ -7,6 +7,8 @@ import { Pencil, CirclePlus, RefreshCcw, Upload } from 'lucide-react';
 import Select from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
 import {  } from 'lucide-react';
+import ThreeModelViewer from './ThreeModelViewer';
+import ThreeModelUploadModal from './ThreeModelUploadModal';
 
 interface ProductViewModalProps {
   isOpen: boolean;
@@ -23,6 +25,7 @@ interface Product {
   url?: string;
   sku?: string;
   note?: string;
+  model3d_url?: string;
 }
 
 interface Category {
@@ -43,6 +46,9 @@ export default function ProductViewModal({ isOpen, onClose, product, onOpenCateg
   });
   const [isUploading, setIsUploading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [showModelViewer, setShowModelViewer] = useState(false);
+  const [isModelUploading, setIsModelUploading] = useState(false);
+  const [showModelUploadModal, setShowModelUploadModal] = useState(false);
 
   // Reset form data when product changes
   useEffect(() => {
@@ -157,6 +163,51 @@ export default function ProductViewModal({ isOpen, onClose, product, onOpenCateg
 
   const refreshCategories = async () => {
     await fetchCategories();
+  };
+
+  const handleModelUpload = async (file: File) => {
+    try {
+      setIsModelUploading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) throw new Error('User not found');
+
+      const fileName = `${Math.random()}.glb`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const { data, error: uploadError } = await supabase.storage
+        .from('3d_models')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('3d_models')
+        .getPublicUrl(filePath);
+
+      // Save model URL to model3d table
+      const { error: dbError } = await supabase
+        .from('model3d')
+        .upsert({
+          product_id: product?.id,
+          model3d_url: publicUrl,
+          user_id: user.id
+        });
+
+      if (dbError) throw dbError;
+
+      // Update local state
+      setFormData(prev => ({
+        ...prev,
+        model3d_url: publicUrl
+      }));
+
+    } catch (error) {
+      console.error('Model upload error:', error);
+      alert('Model upload failed');
+    } finally {
+      setIsModelUploading(false);
+    }
   };
 
   return (
@@ -361,8 +412,59 @@ export default function ProductViewModal({ isOpen, onClose, product, onOpenCateg
               )}
             </div>
           </div>
+
+          <div className="flex space-x-2 mt-4">
+            {product?.model3d_url ? (
+              <Button 
+                variant="solid" 
+                color="primary" 
+                onClick={() => setShowModelViewer(true)}
+              >
+                View 3D Model
+              </Button>
+            ) : (
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={() => setShowModelUploadModal(true)}
+              >
+                Add 3D Model
+              </Button>
+            )}
+          </div>
         </Dialog.Panel>
       </div>
+
+      {showModelViewer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+          <div className="w-full h-full max-w-4xl max-h-[90vh] bg-base-300 rounded-lg p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold">3D Model Viewer</h3>
+              <Button 
+                variant="close" 
+                color="primary" 
+                onClick={() => setShowModelViewer(false)} 
+              />
+            </div>
+            <div className="w-full h-[calc(100%-60px)]">
+              <ThreeModelViewer 
+                model3d_url={product?.model3d_url} 
+                mode="view"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ThreeModelUploadModal 
+        isOpen={showModelUploadModal}
+        onClose={() => setShowModelUploadModal(false)}
+        productId={product?.id || ''}
+        onSuccess={() => {
+          // Refresh product data or close modal
+          window.location.reload();
+        }}
+      />
     </Dialog>
   );
 } 

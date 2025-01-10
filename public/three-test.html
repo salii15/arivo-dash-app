@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>3D Model Viewer & Editor</title>
+    <style>
+        body { margin: 0; }
+        .viewer-container, .editor-container {
+            width: 100%;
+            height: 50vh;
+        }
+        .controls {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="viewer" class="viewer-container"></div>
+    <div id="editor" class="editor-container"></div>
+    <div class="controls">
+        <input type="file" id="modelInput" accept=".glb,.gltf">
+        <button onclick="setTransformMode('translate')">Move</button>
+        <button onclick="setTransformMode('rotate')">Rotate</button>
+        <button onclick="setTransformMode('scale')">Scale</button>
+    </div>
+
+    <script src="three-viewer.js" type="module"></script>
+    <script src="three-editor.js" type="module"></script>
+    <script type="module">
+        const init = async () => {
+            const viewer = await new ThreeViewer('viewer');
+
+            document.getElementById('modelInput').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    viewer.loadModel(file);
+                }
+            });
+        };
+
+        init();
+    </script>
+</body>
+</html> 

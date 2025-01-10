@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Model Viewer</title>
+    
+    <!-- Import map FIRST -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js"
+            }
+        }
+    </script>
+
+    <!-- Then other scripts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+</head>
+
+<body class="bg-gray-700 w-full h-screen">
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="absolute inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
+    </div>
+    
+    <!-- Gizli model-viewer -->
+    <model-viewer id="ar-viewer" style="width: 0px; height: 0px;" ar ar-modes="webxr scene-viewer quick-look"></model-viewer>
+    
+    <div id="dimensions-container" class="absolute top-0 left-0 w-full h-full pointer-events-none hidden">
+        <div id="width-label" class="absolute bg-white px-3 py-1.5 rounded shadow-md border border-gray-200 text-sm transform -translate-x-1/2 -translate-y-1/2"></div>
+        <div id="height-label" class="absolute bg-white px-3 py-1.5 rounded shadow-md border border-gray-200 text-sm transform -translate-x-1/2 -translate-y-1/2"></div>
+        <div id="depth-label" class="absolute bg-white px-3 py-1.5 rounded shadow-md border border-gray-200 text-sm transform -translate-x-1/2 -translate-y-1/2"></div>
+        <div id="depth-labelMinus" class="absolute bg-white px-3 py-1.5 rounded shadow-md border border-gray-200 text-sm transform -translate-x-1/2 -translate-y-1/2"></div>
+        <div id="height-labelMinus" class="absolute bg-white px-3 py-1.5 rounded shadow-md border border-gray-200 text-sm transform -translate-x-1/2 -translate-y-1/2"></div>
+
+      </div>
+    <div class="bg-gray-500 w-full h-full rounded-lg">
+        <canvas class="bg-gray-800 w-full h-full rounded-lg" id="arivo-canvas">sdf</canvas>
+    </div>
+
+    <div class="absolute top-5 right-5 p-2 bg-blue-400 text-white rounded-md flex flex-col gap-2 hover:bg-blue-800 transition-colors z-10">
+        <button id="dimensionsButton" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors z-10">
+            Show Dimensions
+        </button>
+        <button id="autoRotateButton" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors z-10">
+            Auto Rotate
+        </button>
+        <button id="viewArButton" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors z-10">
+            View AR
+        </button>
+    </div>
+
+    <script type="module" src="arivo-viewer.js"></script>
+</body>
+</html>
