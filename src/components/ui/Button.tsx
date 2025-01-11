@@ -7,6 +7,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   color?: 'primary' | 'dark' | 'midDark' | 'secondary' | 'danger';
   icon?: IconType;
   iconPosition?: 'left' | 'right';
+  size?: 'sm' | 'md';
   children?: React.ReactNode;
   type?: 'button' | 'submit' | 'reset';
 }
@@ -16,12 +17,18 @@ export default function Button({
   color = 'primary',
   icon: Icon,
   iconPosition = 'left',
+  size = 'md',
   children, 
   className = '', 
   type,
   ...props 
 }: ButtonProps) {
-  const baseStyles = 'px-4 py-3 rounded-md flex justify-center items-center gap-2 transition-colors';
+  const sizeStyles = {
+    sm: 'px-2 py-2 gap-px',
+    md: 'px-4 py-3 gap-2'
+  };
+
+  const baseStyles = `rounded-md flex justify-center items-center transition-colors ${sizeStyles[size]}`;
   
   const variantStyles = {
     solid: {
@@ -72,9 +79,9 @@ export default function Button({
         <XMarkIcon className="h-6 w-6" />
       ) : (
         <>
-          {Icon && iconPosition === 'left' && <Icon className="w-4 h-4" />}
+          {Icon && iconPosition === 'left' && <Icon className={`${size === 'sm' ? 'w-3 h-3' : 'w-4 h-4'}`} />}
           {children}
-          {Icon && iconPosition === 'right' && <Icon className="w-4 h-4" />}
+          {Icon && iconPosition === 'right' && <Icon className={`${size === 'sm' ? 'w-3 h-3' : 'w-4 h-4'}`} />}
         </>
       )}
     </button>

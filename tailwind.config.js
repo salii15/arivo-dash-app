@@ -52,6 +52,11 @@ module.exports = {
         dark: '#0a0a0a',
         'dark-light': '#171717',
       },
+      textColor: {
+        'base-content': '#E2E2E2',  // Açık gri - varsayılan text rengi
+        'base-content-light': '#FFFFFF',  // Beyaz - vurgulu text
+        'base-content-dim': '#A3A3A3',  // Soluk gri - ikincil text
+      }
     },
   },
   plugins: [require("daisyui")],

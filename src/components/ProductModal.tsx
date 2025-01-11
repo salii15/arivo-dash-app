@@ -63,9 +63,20 @@ export default function ProductModal({ isOpen, onClose, mode, onOpenCategories }
         throw new Error('User authentication required');
       }
 
-      if (!formData.title.trim()) {
-        throw new Error('Please enter a product title');
+      // Get the latest product to find the last ARV ID
+      const { data: latestProduct } = await supabase
+        .from('products')
+        .select('arv_id')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      // Generate new ARV ID
+      let newNumber = 2658; // Default starting number
+      if (latestProduct && latestProduct[0]?.arv_id) {
+        const currentNumber = parseInt(latestProduct[0].arv_id.split('-')[1]);
+        newNumber = currentNumber + 1;
       }
+      const newArvId = `ARV-${newNumber}`;
 
       const productData = {
         title: formData.title,
@@ -74,7 +85,8 @@ export default function ProductModal({ isOpen, onClose, mode, onOpenCategories }
         url: formData.url || null,
         sku: formData.sku || null,
         note: formData.note || null,
-        user_id: user.id
+        user_id: user.id,
+        arv_id: newArvId // Add the new ARV ID
       };
 
       const { data, error } = await supabase

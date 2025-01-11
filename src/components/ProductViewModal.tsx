@@ -3,12 +3,11 @@ import { XMarkIcon, ArrowPathIcon, PlusCircleIcon } from '@heroicons/react/24/ou
 import { useState, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { supabase } from '../utils/supabase';
-import { Pencil, CirclePlus, RefreshCcw, Upload } from 'lucide-react';
+import { Pencil, CirclePlus, RefreshCcw, Upload, Play } from 'lucide-react';
 import Select from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
-import {  } from 'lucide-react';
 import ThreeModelViewer from './ThreeModelViewer';
-import ThreeModelUploadModal from './ThreeModelUploadModal';
+import { useRouter } from 'next/router';
 
 interface ProductViewModalProps {
   isOpen: boolean;
@@ -26,6 +25,7 @@ interface Product {
   sku?: string;
   note?: string;
   model3d_url?: string;
+  arv_id?: string;
 }
 
 interface Category {
@@ -35,6 +35,7 @@ interface Category {
 }
 
 export default function ProductViewModal({ isOpen, onClose, product, onOpenCategories }: ProductViewModalProps) {
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     title: product?.title || '',
@@ -47,8 +48,6 @@ export default function ProductViewModal({ isOpen, onClose, product, onOpenCateg
   const [isUploading, setIsUploading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [showModelViewer, setShowModelViewer] = useState(false);
-  const [isModelUploading, setIsModelUploading] = useState(false);
-  const [showModelUploadModal, setShowModelUploadModal] = useState(false);
 
   // Reset form data when product changes
   useEffect(() => {
@@ -165,49 +164,11 @@ export default function ProductViewModal({ isOpen, onClose, product, onOpenCateg
     await fetchCategories();
   };
 
-  const handleModelUpload = async (file: File) => {
-    try {
-      setIsModelUploading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) throw new Error('User not found');
-
-      const fileName = `${Math.random()}.glb`;
-      const filePath = `${user.id}/${fileName}`;
-
-      const { data, error: uploadError } = await supabase.storage
-        .from('3d_models')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('3d_models')
-        .getPublicUrl(filePath);
-
-      // Save model URL to model3d table
-      const { error: dbError } = await supabase
-        .from('model3d')
-        .upsert({
-          product_id: product?.id,
-          model3d_url: publicUrl,
-          user_id: user.id
-        });
-
-      if (dbError) throw dbError;
-
-      // Update local state
-      setFormData(prev => ({
-        ...prev,
-        model3d_url: publicUrl
-      }));
-
-    } catch (error) {
-      console.error('Model upload error:', error);
-      alert('Model upload failed');
-    } finally {
-      setIsModelUploading(false);
-    }
+  const handleOpenEditor = () => {
+    router.push({
+      pathname: '/three/editor',
+      query: { productId: product?.arv_id }
+    });
   };
 
   return (
@@ -218,9 +179,17 @@ export default function ProductViewModal({ isOpen, onClose, product, onOpenCateg
         <Dialog.Panel className="bg-base-300 rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col">
           {/* Header */}
           <div className="flex justify-between items-center p-6 border-b border-base-content/10">
-            <Dialog.Title className="text-xl font-bold text-base-content">
-              {isEditing ? 'Edit Product' : 'View Product'}
-            </Dialog.Title>
+            <div className="flex flex-row items-center gap-2">
+              <Dialog.Title className="text-xl font-bold text-base-content">
+                {isEditing ? 'Edit Product' : 'View Product'}
+              </Dialog.Title>
+              {product?.arv_id && (
+                <>
+                  <div className="divider my-1"></div>
+                  <span className="text-sm text-base-content/60">ARV ID: {product.arv_id}</span>
+                </>
+              )}
+            </div>
             <Button variant="close" color="primary" onClick={handleClose} />
           </div>
 
@@ -290,33 +259,63 @@ export default function ProductViewModal({ isOpen, onClose, product, onOpenCateg
                   </div>
                 </div>
 
-                <div className="col-span-1">
+                <div className="col-span-1 space-y-4">
                   <label className="text-sm text-base-content/60 mb-1 block">Image</label>
-                  <div {...getRootProps()} className="border-2 w-full h-auto border-dashed border-base-content/20 rounded-lg p-4 cursor-pointer hover:border-primary/50 aspect-square flex flex-col items-center justify-center">
-                    <input {...getInputProps()} />
-                    <div className="text-center flex flex-col items-center gap-4">
-                      {formData.image_url ? (
-                        <div className="w-full">
+                  <div className="border-2 w-full h-auto border-dashed border-base-content/20 rounded-lg p-4 aspect-[4/3] flex flex-col">
+                    <div className="h-1/2 mb-2">
+                      <div {...getRootProps()} className="w-full h-full cursor-pointer hover:border-primary/50 flex flex-col items-center justify-center">
+                        {formData.image_url ? (
                           <img
                             src={formData.image_url}
                             alt="Product"
-                            className="w-full h-full object-cover rounded-lg"
+                            className="w-full h-full object-contain rounded-lg"
                           />
-                        </div>
-                      ) : (
-                        <>
-                          <Upload className="w-12 h-12 text-gray-400" />
-                          <p className="text-gray-400">
-                            Click or drag to upload image
-                          </p>
-                          <Button variant="outlined" color="primary" className="mt-2" type="button">
-                            Select Image
-                          </Button>
-                        </>
-                      )}
-                      {isUploading && (
-                        <p className="text-blue-400 mt-2">Uploading...</p>
-                      )}
+                        ) : (
+                          <>
+                            <Upload className="w-12 h-12 text-gray-400" />
+                            <p className="text-gray-400">Click or drag to upload image</p>
+                            <Button variant="outlined" color="primary" className="mt-2" type="button">
+                              Select Image
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="h-1/2 border-t-2 border-base-content/10 pt-2">
+                      <label className="text-sm text-base-content/60 mb-1 block">3D Model</label>
+                      <div className="w-full h-[calc(100%-24px)] flex flex-col items-center justify-center">
+                        {product?.model3d_url ? (
+                          <div className="flex items-center gap-4">
+                            <Button
+                              variant="solid"
+                              color="primary"
+                              icon={Play}
+                              onClick={() => setShowModelViewer(true)}
+                            >
+                              View Model
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              color="secondary"
+                              onClick={handleOpenEditor}
+                            >
+                              Open Editor
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <p className="text-gray-400 mb-2">There is no 3D model. Add 3D model with editor</p>
+                            <Button
+                              variant="solid"
+                              color="primary"
+                              onClick={handleOpenEditor}
+                            >
+                              Open Editor
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -372,21 +371,61 @@ export default function ProductViewModal({ isOpen, onClose, product, onOpenCateg
                   </div>
                 </div>
 
-                <div className="col-span-1">
+                <div className="col-span-1 space-y-4">
                   <label className="text-sm text-base-content/60 mb-1 block">Image</label>
-                  <div className="border-2 w-full h-auto border-dashed border-base-content/20 rounded-lg p-4 aspect-square flex flex-col items-center justify-center">
-                    {product?.image_url ? (
-                      <img
-                        src={product.image_url}
-                        alt={product.title}
-                        className="w-full h-full object-contain rounded-lg"
-                      />
-                    ) : (
-                      <div className="text-center flex flex-col items-center gap-4">
-                        <Upload className="w-12 h-12 text-gray-400" />
-                        <p className="text-gray-400">No image available</p>
+                  <div className="border-2 w-full h-auto border-dashed border-base-content/20 rounded-lg p-4 aspect-[4/3] flex flex-col">
+                    <div className="h-1/2 mb-2">
+                      <div className="w-full h-full flex items-center justify-center">
+                        {product?.image_url ? (
+                          <img
+                            src={product.image_url}
+                            alt={product.title}
+                            className="w-full h-full object-contain rounded-lg"
+                          />
+                        ) : (
+                          <div className="text-center flex flex-col items-center gap-4">
+                            <Upload className="w-12 h-12 text-gray-400" />
+                            <p className="text-gray-400">No image available</p>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
+
+                    <div className="h-1/2 border-t-2 border-base-content/10 pt-2">
+                      <label className="text-sm text-base-content/60 mb-1 block">3D Model</label>
+                      <div className="w-full h-[calc(100%-24px)] flex flex-col items-center justify-center">
+                        {product?.model3d_url ? (
+                          <div className="flex items-center gap-4">
+                            <Button
+                              variant="solid"
+                              color="primary"
+                              icon={Play}
+                              onClick={() => setShowModelViewer(true)}
+                            >
+                              View Model
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              color="secondary"
+                              onClick={handleOpenEditor}
+                            >
+                              Open Editor
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <p className="text-gray-400 mb-2">There is no 3D model. Add 3D model with editor</p>
+                            <Button
+                              variant="solid"
+                              color="primary"
+                              onClick={handleOpenEditor}
+                            >
+                              Open Editor
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -414,21 +453,13 @@ export default function ProductViewModal({ isOpen, onClose, product, onOpenCateg
           </div>
 
           <div className="flex space-x-2 mt-4">
-            {product?.model3d_url ? (
+            {product?.model3d_url && (
               <Button 
                 variant="solid" 
                 color="primary" 
                 onClick={() => setShowModelViewer(true)}
               >
                 View 3D Model
-              </Button>
-            ) : (
-              <Button
-                variant="outlined"
-                color="primary"
-                onClick={() => setShowModelUploadModal(true)}
-              >
-                Add 3D Model
               </Button>
             )}
           </div>
@@ -455,16 +486,6 @@ export default function ProductViewModal({ isOpen, onClose, product, onOpenCateg
           </div>
         </div>
       )}
-
-      <ThreeModelUploadModal 
-        isOpen={showModelUploadModal}
-        onClose={() => setShowModelUploadModal(false)}
-        productId={product?.id || ''}
-        onSuccess={() => {
-          // Refresh product data or close modal
-          window.location.reload();
-        }}
-      />
     </Dialog>
   );
 } 

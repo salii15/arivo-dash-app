@@ -1,0 +1,28 @@
+{
+  "camera": {
+    "fov": 35,
+    "near": 0.01,
+    "far": 1000,
+    "position": {
+      "x": 3,
+      "y": 3,
+      "z": 3
+    }
+  },
+  "grid": {
+    "size": 10,
+    "divisions": 100,
+    "centerLineColor": "0x00ff00",
+    "gridLineColor": "0x262626"
+  },
+  "fog": {
+    "color": "0x585858",
+    "nearFactor": 0.1,
+    "farFactor": 2.5
+  },
+  "controls": {
+    "minDistance": 0.5,
+    "maxDistance": 3,
+    "dampingFactor": 0.05
+  }
+} 
