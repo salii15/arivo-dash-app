@@ -1,13 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Script from 'next/script';
-import { ChevronLeft, Trash2, Eye, EyeOff, Edit2, Palette, MousePointer, ChevronDown, Plus } from 'lucide-react';
+import { ChevronLeft, Trash2, Eye, EyeOff, Edit2, Palette, MousePointer, ChevronDown, Plus, Save } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import sceneConfig from '@/config/scene.json';
+import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
+import { toast } from 'react-hot-toast';
+import { supabase } from '@/utils/supabase';
 
 export default function ThreeEditor() {
   const router = useRouter();
@@ -29,6 +32,9 @@ export default function ThreeEditor() {
   const [hoveredMesh, setHoveredMesh] = useState<THREE.Mesh | null>(null);
   const [selectedMeshName, setSelectedMeshName] = useState('');
   const [dropdownMeshes, setDropdownMeshes] = useState<THREE.Mesh[]>([]);
+  const [selectedColorConfig, setSelectedColorConfig] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
 
   const handleBack = () => {
     setShowConfirmDialog(true);
@@ -434,6 +440,103 @@ export default function ThreeEditor() {
     }
   }, [sceneObjects]);
 
+  const handleMeshColorChange = (colorData: string) => {
+    if (selectedMeshName) {
+      const mesh = sceneRef.current?.getObjectByName(selectedMeshName);
+      if (mesh instanceof THREE.Mesh) {
+        const material = mesh.material as THREE.MeshStandardMaterial;
+        material.color.setHex(parseInt(colorData.replace('0x', ''), 16));
+      }
+    }
+  };
+
+  const handleSave = async () => {
+    if (!hasChanges || !sceneRef.current) {
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+
+      // Get the current scene as GLB
+      const exporter = new GLTFExporter();
+      const glbBlob = await new Promise((resolve) => {
+        exporter.parse(
+          sceneRef.current!,
+          (gltf: ArrayBuffer) => {
+            const blob = new Blob([gltf], { type: 'application/octet-stream' });
+            resolve(blob);
+          },
+          { binary: true }
+        );
+      });
+
+      // Create unique filename
+      const filename = `model_${productId}_${Date.now()}.glb`;
+
+      // Upload to Supabase Storage
+      const { data: storageData, error: storageError } = await supabase.storage
+        .from('models-glb')
+        .upload(filename, glbBlob as Blob);
+
+      if (storageError) {
+        console.error('Storage error:', storageError);
+        throw storageError;
+      }
+
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('models-glb')
+        .getPublicUrl(filename);
+
+      const modelUrl = publicUrlData.publicUrl;
+
+      // Update database
+      const { error: dbError } = await supabase
+        .from('model3d')
+        .upsert({
+          product_id: productId,
+          model_url: modelUrl
+        }, {
+          onConflict: 'product_id'
+        });
+
+      if (dbError) {
+        console.error('Database error:', dbError);
+        throw dbError;
+      }
+
+      setHasChanges(false);
+      toast.success('Model saved successfully');
+    } catch (error) {
+      console.error('Error saving model:', error);
+      toast.error('Failed to save model');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    // Set hasChanges to true when a model is loaded
+    if (isModelLoaded) {
+      setHasChanges(true);
+    }
+  }, [isModelLoaded]);
+
+  useEffect(() => {
+    // Set hasChanges to true when materials are modified
+    if (materials.length > 0) {
+      setHasChanges(true);
+    }
+  }, [materials]);
+
+  useEffect(() => {
+    // Set hasChanges to true when color configs change
+    if (colorConfigs.length > 0) {
+      setHasChanges(true);
+    }
+  }, [colorConfigs]);
+
   return (
     <>
       <div className="flex flex-col h-screen bg-base-300">
@@ -456,8 +559,17 @@ export default function ThreeEditor() {
           <Button
             variant="solid"
             size="sm"
-            className="bg-primary hover:bg-primary-focus text-primary-content"
+            className={`bg-primary hover:bg-primary-focus text-primary-content ${
+              !hasChanges && 'opacity-50 cursor-not-allowed'
+            }`}
+            onClick={handleSave}
+            disabled={!hasChanges || isSaving}
           >
+            {isSaving ? (
+              <span className="loading loading-spinner loading-sm"></span>
+            ) : (
+              <Save className="w-4 h-4 mr-2" />
+            )}
             Save 3D Model
           </Button>
 
@@ -654,11 +766,38 @@ export default function ThreeEditor() {
               )}
             </div>
 
+            <div className={`absolute bottom-0 left-0 right-0 bg-base-200/90 backdrop-blur-sm transition-all duration-300 ${isColorConfigOpen ? 'h-24' : 'h-0'} overflow-hidden`}>
+              <div className="container mx-auto px-4 py-3">
+                <div className="flex items-center gap-4 overflow-x-auto custom-scrollbar">
+                  {colorConfigs.map((config) => (
+                    <div 
+                      key={config.id} 
+                      className="flex flex-col items-center gap-1 min-w-[60px]"
+                    >
+                      <button
+                        className={`w-10 h-10 rounded-full transition-all hover:scale-110 ${
+                          selectedColorConfig === config.colorData ? 'ring-2 ring-primary ring-offset-2' : ''
+                        }`}
+                        style={{ backgroundColor: config.colorData.replace('0x', '#') }}
+                        onClick={() => {
+                          setSelectedColorConfig(config.colorData);
+                          handleMeshColorChange(config.colorData);
+                        }}
+                      />
+                      <span className="text-xs text-base-content whitespace-nowrap">
+                        {config.colorName || `Color ${config.id}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Right Sidebar */}
           <div className="w-80 bg-base-200 border-l border-base-300 p-4">
-            <div className="mb-6">
+            
+            <div className="mb-6 bg-base-100 rounded-lg p-2">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Palette className="w-4 h-4 text-base-content" />
@@ -763,13 +902,16 @@ export default function ThreeEditor() {
                       ))}
                     </div>
 
-                    <button
-                      className="mt-3 flex items-center justify-center gap-1 w-full p-2 rounded-md hover:bg-base-100 text-base-content-dim hover:text-base-content transition-colors"
+                    <Button
+                      variant="pastel"
+                      color='primary'
+                      icon={Plus}
+                      size='sm'
+                      className="w-full mt-3"
                       onClick={addNewColorConfig}
                     >
-                      <Plus className="w-3.5 h-3.5" />
                       <span className="text-sm">Add Color Configuration</span>
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}

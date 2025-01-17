@@ -1,5 +1,5 @@
 import DashboardLayout from '@/pages/DashboardLayout';
-import { Plus, FolderKanban, FileText } from 'lucide-react';
+import { Plus, FolderKanban, FileText, Package, TrendingUp, TrendingDown, DollarSign, Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '../utils/supabase';
@@ -271,11 +271,17 @@ export default function Dashboard() {
           </div>
 
           {/* Analytics Card */}
-          <div className="card bg-base-200 shadow-xl overflow-hidden">
-            <div className="card-body p-4">
-              <h2 className="card-title text-base-content text-sm mb-2">Analytics</h2>
-              <div className="divider my-1 opacity-30"></div>
-              <div className="grid grid-cols-2 gap-2">
+          <div className="card bg-gradient-to-br from-base-200 to-base-300 shadow-xl overflow-hidden">
+            <div className="card-body p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <h2 className="card-title text-base-content text-lg font-bold">Analytics Overview</h2>
+                <select className="select select-sm select-ghost ml-auto">
+                  <option>Last 7 days</option>
+                  <option>Last 30 days</option>
+                  <option>This Year</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 {loading ? (
                   <>
                     {[1, 2, 3, 4].map((i) => (
@@ -287,22 +293,57 @@ export default function Dashboard() {
                   </>
                 ) : (
                   <>
-                    <div className="stat bg-base-300 rounded-lg p-4">
-                      <div className="stat-title text-base-content/60">Total Products</div>
-                      <div className="stat-value text-primary">{analytics.totalProducts}</div>
+                    <div className="stat bg-base-100/50 backdrop-blur rounded-xl p-6 transition-all hover:shadow-md hover:-translate-y-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                          <Package className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="stat-title text-base-content/70 font-medium">Total Products</div>
+                      </div>
+                      <div className="stat-value text-primary text-3xl">{analytics.totalProducts}</div>
+                      <div className="text-sm text-success mt-2 flex items-center gap-1">
+                        <TrendingUp className="w-4 h-4" /> +12% from last month
+                      </div>
                     </div>
-                    <div className="stat bg-base-300 rounded-lg p-4">
-                      <div className="stat-title text-base-content/60">Active Projects</div>
-                      <div className="stat-value text-primary">{analytics.activeProjects}</div>
+
+                    <div className="stat bg-base-100/50 backdrop-blur rounded-xl p-6 transition-all hover:shadow-md hover:-translate-y-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-secondary/10 rounded-lg">
+                          <FolderKanban className="w-5 h-5 text-secondary" />
+                        </div>
+                        <div className="stat-title text-base-content/70 font-medium">Active Projects</div>
+                      </div>
+                      <div className="stat-value text-secondary text-3xl">{analytics.activeProjects}</div>
+                      <div className="text-sm text-success mt-2 flex items-center gap-1">
+                        <TrendingUp className="w-4 h-4" /> +5% from last month
+                      </div>
                     </div>
-                    <div className="stat bg-base-300 rounded-lg p-4">
-                      <div className="stat-title text-base-content/60">Pending Orders</div>
-                      <div className="stat-value text-primary">{analytics.pendingOrders}</div>
+
+                    <div className="stat bg-base-100/50 backdrop-blur rounded-xl p-6 transition-all hover:shadow-md hover:-translate-y-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-accent/10 rounded-lg">
+                          <Clock className="w-5 h-5 text-accent" />
+                        </div>
+                        <div className="stat-title text-base-content/70 font-medium">Pending Orders</div>
+                      </div>
+                      <div className="stat-value text-accent text-3xl">{analytics.pendingOrders}</div>
+                      <div className="text-sm text-error mt-2 flex items-center gap-1">
+                        <TrendingDown className="w-4 h-4" /> -3% from last month
+                      </div>
                     </div>
-                    <div className="stat bg-base-300 rounded-lg p-4">
-                      <div className="stat-title text-base-content/60">Total Revenue</div>
-                      <div className="stat-value text-primary">
+
+                    <div className="stat bg-base-100/50 backdrop-blur rounded-xl p-6 transition-all hover:shadow-md hover:-translate-y-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-success/10 rounded-lg">
+                          <DollarSign className="w-5 h-5 text-success" />
+                        </div>
+                        <div className="stat-title text-base-content/70 font-medium">Total Revenue</div>
+                      </div>
+                      <div className="stat-value text-success text-3xl">
                         ${analytics.totalRevenue.toLocaleString()}
+                      </div>
+                      <div className="text-sm text-success mt-2 flex items-center gap-1">
+                        <TrendingUp className="w-4 h-4" /> +18% from last month
                       </div>
                     </div>
                   </>
