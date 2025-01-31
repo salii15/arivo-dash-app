@@ -31,6 +31,12 @@ export default function ProductModal({ isOpen, onClose, mode, onOpenCategories }
     sku: '',
     note: '',
   });
+  const [errors, setErrors] = useState({
+    title: false,
+    category: false,
+    url: false,
+    sku: false,
+  });
   const [isUploading, setIsUploading] = useState(false);
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -56,6 +62,22 @@ export default function ProductModal({ isOpen, onClose, mode, onOpenCategories }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate required fields
+    const newErrors = {
+      title: !formData.title,
+      category: !formData.category,
+      url: !formData.url,
+      sku: !formData.sku,
+    };
+    
+    setErrors(newErrors);
+
+    // If any required field is empty, stop submission
+    if (Object.values(newErrors).some(error => error)) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
@@ -193,10 +215,16 @@ export default function ProductModal({ isOpen, onClose, mode, onOpenCategories }
                     <div className="h-12 bg-gray-700 rounded">
                       <input
                         type="text"
-                        placeholder="Title"
-                        className="input text-base-content input-bordered w-full bg-base-200 placeholder:text-primary-900"
+                        placeholder="Title *"
+                        className={`input text-base-content input-bordered w-full bg-base-200 placeholder:text-primary-900 ${
+                          errors.title ? 'border-red-500' : ''
+                        }`}
                         value={formData.title}
-                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, title: e.target.value });
+                          setErrors({ ...errors, title: false });
+                        }}
+                        required
                       />
                     </div>
 
@@ -204,9 +232,13 @@ export default function ProductModal({ isOpen, onClose, mode, onOpenCategories }
                         <div className="flex-1">
                           <Select
                             value={formData.category}
-                            onChange={(value) => setFormData({ ...formData, category: value })}
+                            onChange={(value) => {
+                              setFormData({ ...formData, category: value });
+                              setErrors({ ...errors, category: false });
+                            }}
                             options={categories}
-                            placeholder="Select a category"
+                            placeholder="Select a category *"
+                            required
                           />
                         </div>
                         <Button variant="outlined" color="primary" icon={RefreshCcw} onClick={getCategories}>
@@ -228,18 +260,30 @@ export default function ProductModal({ isOpen, onClose, mode, onOpenCategories }
                     
                     <input
                         type="text"
-                        placeholder="SKU"
-                        className="input text-base-content input-bordered w-full bg-base-200 placeholder:text-primary-900"
+                        placeholder="SKU *"
+                        className={`input text-base-content input-bordered w-full bg-base-200 placeholder:text-primary-900 ${
+                          errors.sku ? 'border-red-500' : ''
+                        }`}
                         value={formData.sku}
-                        onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, sku: e.target.value });
+                          setErrors({ ...errors, sku: false });
+                        }}
+                        required
                       />
                       <div className="flex space-x-2">
                         <input
                           type="text"
-                          placeholder="URL"
-                          className="input text-base-content input-bordered flex-1 bg-base-200 placeholder:text-primary-900"
+                          placeholder="URL *"
+                          className={`input text-base-content input-bordered flex-1 bg-base-200 placeholder:text-primary-900 ${
+                            errors.url ? 'border-red-500' : ''
+                          }`}
                           value={formData.url}
-                          onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                          onChange={(e) => {
+                            setFormData({ ...formData, url: e.target.value });
+                            setErrors({ ...errors, url: false });
+                          }}
+                          required
                         />
          
                       </div>

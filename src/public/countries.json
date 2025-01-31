@@ -1,0 +1,14 @@
+{
+  "TR": [
+    { "code": "01", "name": "Adana" },
+    { "code": "02", "name": "Adıyaman" },
+    { "code": "03", "name": "Afyonkarahisar" },
+    // ... diğer iller
+  ],
+  "US": [
+    { "code": "AL", "name": "Alabama" },
+    { "code": "AK", "name": "Alaska" },
+    { "code": "AZ", "name": "Arizona" },
+    // ... diğer eyaletler
+  ]
+} 

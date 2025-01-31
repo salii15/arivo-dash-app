@@ -61,7 +61,7 @@ export default function SignUp() {
     } else if (data.user) {
       setUserId(data.user.id);
       setUserEmail(email);
-      setStep(2);
+      router.push('/email-confirmation');
     }
   };
 

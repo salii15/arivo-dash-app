@@ -6,11 +6,15 @@ import { FileText } from "lucide-react";
 import SelectProjectsModal from '@/components/SelectProjectsModal';
 
 interface Order {
-  id: number;
-  customer_name: string;
-  status: string;
-  total: number;
+  id: string;
+  title: string;
+  budget: number;
+  paid: boolean;
+  payment_status: string;
   created_at: string;
+  updated_at: string;
+  customer_name?: string;
+  status?: string;
 }
 
 interface OrderModalProps {
@@ -45,6 +49,11 @@ export default function OrderModal({ isOpen, onClose }: OrderModalProps) {
       return;
     }
 
+    if (selectedProjectIds.length === 0) {
+      alert('Please select at least one project');
+      return;
+    }
+
     try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
@@ -69,10 +78,20 @@ export default function OrderModal({ isOpen, onClose }: OrderModalProps) {
       // Calculate total budget from selected projects
       const totalBudget = projects?.reduce((sum, project) => sum + (project.budget || 0), 0);
 
+      // Fetch the count of existing orders to determine the next order number
+      const { data: existingOrders, error: ordersError } = await supabase
+        .from('orders')
+        .select('*');
+
+      if (ordersError) throw ordersError;
+
+      const orderCount = existingOrders.length;
+      const orderNumber = `ORD-${(2658 + orderCount).toString().padStart(4, '0')}`; // 2658'den başla
+
       // Create order data
       const orderData = {
         title: title,
-        order_number: generateOrderId(),
+        order_number: orderNumber, // Yeni sipariş numarası
         status: 'Pending',
         budget: totalBudget,
         due_date: getDefaultDueDate(),
@@ -103,9 +122,19 @@ export default function OrderModal({ isOpen, onClose }: OrderModalProps) {
       onClose();
       window.location.reload();
 
+      // Seçilen projeleri güncelle
+      await Promise.all(selectedProjectIds.map(async (projectId) => {
+        const { error } = await supabase
+          .from('projects')
+          .update({ onproject: true }) // Projeyi güncelle
+          .eq('id', projectId);
+
+        if (error) throw error;
+      }));
+
     } catch (error) {
       console.error('Error creating order:', error);
-      alert('Error creating order. Please check console for details.');
+      alert('Error creating order. Please try again.');
     }
   };
 

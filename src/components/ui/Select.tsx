@@ -12,15 +12,17 @@ interface SelectProps {
   onChange: (value: string) => void;
   options: Option[];
   placeholder?: string;
+  required?: boolean;
+  className?: string;
 }
 
-export default function Select({ value, onChange, options, placeholder = "Select an option" }: SelectProps) {
+export default function Select({ value, onChange, options, placeholder = "Select an option", className }: SelectProps) {
   const selectedOption = options.find(opt => opt.title === value);
 
   return (
     <Listbox value={value} onChange={onChange}>
       <div className="relative">
-        <Listbox.Button className="relative w-full items-center select select-bordered bg-base-300 text-left">
+        <Listbox.Button className={`relative w-full items-center select select-bordered bg-base-300 text-left ${className}`}>
           <span className="block text-primary-900 truncate">
             {selectedOption?.title || placeholder}
           </span>

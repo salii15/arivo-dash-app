@@ -6,6 +6,7 @@ interface Project {
   id: string;
   title: string;
   created_at: string;
+  onproject: boolean;
 }
 
 interface SelectProjectsModalProps {
@@ -29,33 +30,17 @@ export default function SelectProjectsModal({
     const fetchProjects = async () => {
       setLoading(true);
       try {
-        // First, get all project IDs that are already assigned to orders
-        const { data: orders, error: ordersError } = await supabase
-          .from('orders')
-          .select('projects');
-
-        if (ordersError) throw ordersError;
-
-        // Create a Set of all assigned project IDs
-        const assignedProjectIds = new Set(
-          orders?.flatMap(order => order.projects || [])
-        );
-
-        // Fetch all approved projects
+        // Fetch all projects where onProject is false and status is 'Approved'
         const { data: allProjects, error: projectsError } = await supabase
           .from('projects')
           .select('*')
-          .eq('approved', true)
+          .eq('onproject', false)
+          .eq('status', 'Approved')
           .order('created_at', { ascending: false });
 
         if (projectsError) throw projectsError;
 
-        // Filter out projects that are already assigned to other orders
-        const availableProjects = allProjects.filter(
-          project => !assignedProjectIds.has(project.id)
-        );
-
-        setProjects(availableProjects);
+        setProjects(allProjects);
       } catch (error) {
         console.error('Error fetching projects:', error);
         alert('Error loading projects');

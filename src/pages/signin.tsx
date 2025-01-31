@@ -21,24 +21,25 @@ export default function SignIn() {
       });
 
       if (error) {
-        if (error.message.includes('Invalid login credentials')) {
-          alert('Invalid email or password. Please try again.');
-        } else {
-          alert(error.message);
-        }
+        alert(error.message);
+        return;
+      }
+
+      // Kullanıcı bilgilerini kontrol et
+      const { user } = data;
+      if (user && !user.email_confirmed_at) {
+        alert('E-posta adresinizi onaylamadınız. Lütfen e-postanızı kontrol edin.');
         return;
       }
 
       router.push('/');
     } catch (error) {
       console.error('Error:', error);
-      alert('An error occurred during sign in. Please try again.');
+      alert('Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.');
     } finally {
       setLoading(false);
     }
   };
-
-
 
   const handleForgotPassword = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -97,6 +98,12 @@ export default function SignIn() {
     }
   };
 
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSignIn();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-8 rounded-3xl border border-zinc-800 p-8 bg-zinc-900/50 backdrop-blur-sm">
@@ -118,6 +125,7 @@ export default function SignIn() {
               className="input input-bordered input-primary w-full bg-transparent"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onKeyPress={handleKeyPress}
             />
           </div>
 
@@ -130,6 +138,7 @@ export default function SignIn() {
               className="input input-bordered input-primary w-full bg-zinc-800/50 border-zinc-700 focus:border-primary"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onKeyPress={handleKeyPress}
             />
           </div>
 
