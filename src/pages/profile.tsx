@@ -477,13 +477,13 @@ export default function Profile() {
 
                 {/* Action Buttons */}
                 <div className="grid grid-cols-2 gap-6">
-                <Button 
-                  variant="solid"
-                  color="secondary"
-                  onClick={() => setIsBillingModalOpen(true)}
-                >
-                  Billing Info
-                </Button>
+                  <Button 
+                    variant="solid"
+                    color="secondary"
+                    onClick={() => setIsBillingModalOpen(true)}
+                  >
+                    Billing Info
+                  </Button>
                   {mode === 'view' ? (
                     <Button 
                       variant="solid"
@@ -494,14 +494,51 @@ export default function Profile() {
                       {buttonText}
                     </Button>
                   ) : (
-                    <Button 
-                      variant="solid"
-                      color="primary"
-                      onClick={handleUpdate}
-                      className="gap-2"
-                    >
-                      {buttonText}
-                    </Button>
+                    <div className="flex gap-3">
+                      <Button 
+                        variant="solid"
+                        color="secondary"
+                        onClick={() => {
+                          setMode('view');
+                          // Reload user data to revert changes
+                          const getUser = async () => {
+                            const { data: { user } } = await supabase.auth.getUser();
+                            if (user) {
+                              const { data: existingInfo } = await supabase
+                                .from('user_info')
+                                .select('*')
+                                .eq('user_id', user.id)
+                                .single();
+                              
+                              if (existingInfo) {
+                                setUserData({
+                                  display_name: existingInfo.display_name || '',
+                                  company: existingInfo.company || '',
+                                  position: existingInfo.position || '',
+                                  phone: existingInfo.phone || '',
+                                  date_type: existingInfo.date_type || 'US',
+                                  currency: existingInfo.currency || 'USD',
+                                  pp_url: existingInfo.pp_url || '',
+                                  language: existingInfo.language || 'English',
+                                  phone_country_code: existingInfo.phone_country_code || ''
+                                });
+                              }
+                            }
+                          };
+                          getUser();
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        variant="solid"
+                        color="primary"
+                        onClick={handleUpdate}
+                        className="gap-2"
+                      >
+                        {buttonText}
+                      </Button>
+                    </div>
                   )}
                 </div>
               </>

@@ -172,26 +172,16 @@ export default function Orders() {
 
       // Prepare order data for Stripe
       const orderData = {
-        orderId: order.order_number,
         amount: order.budget,
-        title: order.title,
-        billingInfo: {
-          legal_name: billing.legal_name,
-          address1: billing.address1,
-          address2: billing.address2,
-          city: billing.city,
-          state: billing.state,
-          postal_code: billing.postal_code,
-          country: billing.country,
-          tax_id: billing.tax_id,
-          phone: billing.phone,
-          email: user.email,
-          currency: 'usd', // or use billing.currency if available
-          customer_id: billing.stripe_customer_id, // Use existing Stripe customer ID
-        },
+        customer_id: billing.stripe_customer_id,
+        order_id: order.id,
+        metadata: {
+          order_number: order.order_number,
+          title: order.title,
+        }
       };
 
-      const response = await fetch('/api/create-checkout-session', {
+      const response = await fetch('/api/create-business-checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -201,18 +191,15 @@ export default function Orders() {
 
       const data = await response.json();
       if (!response.ok) {
-        console.error('Error response from Stripe:', data);
         throw new Error(data.details || data.message || 'Payment initiation failed');
       }
 
-      if (data && data.url) {
-        window.location.href = data.url; // Redirect to Stripe payment page
-      } else {
-        throw new Error('No checkout URL received. Please try again later.');
+      if (data.url) {
+        window.location.href = data.url;
       }
     } catch (error) {
-      console.error('Payment error:', error);
-      toast.error('Payment failed: ' + (error as Error).message);
+      console.error('Payment Error:', error);
+      toast.error(error instanceof Error ? error.message : 'Payment initiation failed');
     } finally {
       setLoading(false);
     }

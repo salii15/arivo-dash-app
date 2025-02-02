@@ -6,6 +6,8 @@ import Button from '@/components/ui/Button';
 import { FolderKanban, Pencil, Check, X } from 'lucide-react';
 import Stripe from 'stripe';
 import turkeyStates from '../../public/turkey_states.json'; // Adjust the path as necessary
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 
 interface BillingInfo {
   legal_name: string;
@@ -43,6 +45,24 @@ export default function BillingModal({ isOpen, onClose }: BillingModalProps) {
   const [mode, setMode] = useState<'create' | 'view' | 'edit'>('create');
   const [states, setStates] = useState<{ code: string; name: string }[]>([]);
   const [country, setCountry] = useState<string>('US');
+
+  const phoneInputStyle = {
+    container: "!w-full",
+    inputClass: `!w-full !h-12 input input-bordered 
+                 !pl-[48px] !rounded-lg
+                 focus:!border-primary-500 focus:!ring-primary-500
+                 disabled:!bg-neutral-600 disabled:!text-neutral-300
+                 !bg-neutral-600 ${mode === 'edit' ? '!text-primary-600 !border-primary-500' : '!text-neutral-900'}`,
+    buttonClass: "!h-12 !rounded-lg !bg-neutral-600 !border-primary-500",
+    dropdownClass: "!bg-neutral-600 !text-neutral-900 !rounded-lg"
+  };
+
+  const handlePhoneChange = (value: string, countryCode: string) => {
+    setBillingInfo({
+      ...billingInfo,
+      phone: value
+    });
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -205,7 +225,13 @@ export default function BillingModal({ isOpen, onClose }: BillingModalProps) {
   };
 
   const handleCountryChange = (value: string) => {
-    setBillingInfo({ ...billingInfo, country: value, tax_id: '' });
+    // Ülke değiştiğinde telefon numarasını sıfırla ve yeni ülkeyi ayarla
+    setBillingInfo({ 
+      ...billingInfo, 
+      country: value, 
+      tax_id: '',
+      phone: '' // Telefon numarasını sıfırla
+    });
     
     if (value === 'US') {
       setStates([
@@ -261,7 +287,6 @@ export default function BillingModal({ isOpen, onClose }: BillingModalProps) {
         { code: 'WY', name: 'Wyoming' },
       ]);
     } else if (value === 'TR') {
-      // Load states from turkey_state.json
       setStates(turkeyStates);
     } else {
       setStates([]);
@@ -342,20 +367,32 @@ export default function BillingModal({ isOpen, onClose }: BillingModalProps) {
                   <label className="label">
                     <span className="label-text font-light text-xs text-primary-600">Phone Number</span>
                   </label>
-                  <input
-                    type="tel"
-                    className={`input  input-bordered text-sm ${mode === 'edit' ? 'bg-neutral-500 border-2 border-neutral-300/25' : 'bg-neutral-600'} text-neutral-900 border-neutral-700 focus:border-primary-500 disabled:bg-neutral-600 disabled:text-neutral-300`}
+                  <PhoneInput
+                    country={billingInfo.country.toLowerCase() as 'tr' | 'us' | 'gb'}
                     value={billingInfo.phone}
-                    onChange={(e) => setBillingInfo({...billingInfo, phone: e.target.value})}
+                    onChange={(value: string, countryData: any) => handlePhoneChange(value, countryData.countryCode)}
+                    containerClass={phoneInputStyle.container}
+                    inputClass={`${phoneInputStyle.inputClass} ${mode === 'view' ? '!text-neutral-300' : ''}`}
+                    buttonClass={phoneInputStyle.buttonClass}
+                    dropdownClass={phoneInputStyle.dropdownClass}
                     disabled={mode === 'view'}
-                    placeholder="Enter phone number"
+                    countryCodeEditable={false}
+                    enableSearch={false}
+                    disableCountryCode={false}
+                    inputProps={{
+                      name: 'phone',
+                      required: true,
+                      autoFocus: false,
+                      defaultValue: mode === 'view' ? billingInfo.phone : '',
+                      value: billingInfo.phone,
+                    }}
                   />
                 </div>
               </div>
             </div>
 
             {/* Address Information */}
-            <div className="grid gap-4 bg-neutral-700 p-2 rounded-lg overflow-auto">
+            <div className="grid gap-4 bg-neutral-700 p-2 rounsded-lg overflow-auto">
               <h3 className="text-md font-medium text-primary-800">Address</h3>
               <div className="form-control">
                 <label className="label">
@@ -400,12 +437,26 @@ export default function BillingModal({ isOpen, onClose }: BillingModalProps) {
                   </label>
                   <select
                     className={`select select-bordered ${mode === 'edit' ? 'bg-neutral-500 border-2 border-neutral-300/25' : 'bg-neutral-600'} text-neutral-900 border-neutral-700 focus:border-primary-500 disabled:bg-neutral-600 disabled:text-neutral-300`}
-                    value={billingInfo.state}
+                    value={mode === 'view' ? 
+                      billingInfo.country === 'TR' ? 
+                        turkeyStates.find(state => state.code === billingInfo.state)?.name || billingInfo.state 
+                        : states.find(state => state.code === billingInfo.state)?.name || billingInfo.state 
+                      : billingInfo.state} 
                     onChange={(e) => setBillingInfo({ ...billingInfo, state: e.target.value })}
                     disabled={mode === 'view' || (billingInfo.country !== 'TR' && billingInfo.country !== 'US')}
                   >
-                    <option value="">Select State</option>
-                    {states.map((state) => (
+                    <option value={mode === 'view' ? 
+                      billingInfo.country === 'TR' ? 
+                        turkeyStates.find(state => state.code === billingInfo.state)?.name || '' 
+                        : states.find(state => state.code === billingInfo.state)?.name || '' 
+                      : ''}>
+                      {mode === 'view' ? 
+                        billingInfo.country === 'TR' ? 
+                          turkeyStates.find(state => state.code === billingInfo.state)?.name || 'Select State'
+                          : states.find(state => state.code === billingInfo.state)?.name || 'Select State' 
+                        : 'Select State'}
+                    </option>
+                    {mode !== 'view' && states.map((state) => (
                       <option key={state.code} value={state.code}>
                         {state.name}
                       </option>
